@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pin, X, ChevronLeft, User, Video, Phone, MoreVertical, Lock, Sparkles, MessageCircle, FileText, Presentation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { io, Socket } from 'socket.io-client';
+import { Buffer } from 'buffer';
 import { MessageBubble } from '../../components/MessageBubble';
 import { ChatInput } from '../../components/ChatInput';
 import { MessageActionMenu } from '../../components/MessageActionMenu';
@@ -37,6 +38,7 @@ export default function ChatDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [myId, setMyId] = useState<string>('');
+  const myIdRef = useRef<string>('');
 
   // AI Menu State
   const [isAIActionsVisible, setIsAIActionsVisible] = useState(false);
@@ -48,6 +50,18 @@ export default function ChatDetailScreen() {
     const connectSocket = async () => {
       const token = await SecureStore.getItemAsync('user_token');
       if (!token) return;
+
+      // Ambil My ID dari token sekalian
+      try {
+        const payloadStr = token.split('.')[1];
+        // FIX: atob is not available natively in React Native Hermes securely
+        const payloadObj = JSON.parse(Buffer.from(payloadStr, 'base64').toString('utf8'));
+        const userId = payloadObj.id || payloadObj.sub || '';
+        setMyId(userId);
+        myIdRef.current = userId;
+      } catch (e) {
+        console.error('Failed to parse token for myId:', e);
+      }
 
       newSocket = io('https://dev-ows-api.telkom-digital.id', {
         transports: ['websocket'],
@@ -66,31 +80,14 @@ export default function ChatDetailScreen() {
           id: msg.client_message_id || msg.id,
           text: msg.content || '',
           time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          // Jika tidak ada info, anggap bukan milik sendiri secara default
-          isMine: false 
+          // Tentukan isMine dengan membandingkan sender_id dengan ref myId kita
+          isMine: msg.sender_id === myIdRef.current || msg.is_mine === true
         };
 
         setMessages(prev => {
           // Abaikan jika sudah ada (optimistic UI dari pengirim sendiri)
           if (prev.some(p => p.id === newMessage.id)) return prev;
-          
-          // Fix logic untuk isMine jika ada sender id dan myId dicocokan
-          // Memastikan kita punya akses scope var myId paling up to date:
-          let verifiedIsMine = false;
-          if (msg.sender_id) {
-             const getRawToken = async () => {
-                const tokenString = await SecureStore.getItemAsync('user_token');
-                if (tokenString) {
-                  try {
-                    const payld = JSON.parse(atob(tokenString.split('.')[1]));
-                    if (payld.id === msg.sender_id || payld.sub === msg.sender_id) verifiedIsMine = true;
-                  } catch (e) {}
-                }
-             };
-             getRawToken();
-          }
-          
-          return [...prev, { ...newMessage, isMine: verifiedIsMine }];
+          return [...prev, newMessage];
         });
 
         setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
@@ -123,9 +120,10 @@ export default function ChatDetailScreen() {
       let userId = '';
       try {
         const payloadStr = token.split('.')[1];
-        const payloadObj = JSON.parse(atob(payloadStr));
+        const payloadObj = JSON.parse(Buffer.from(payloadStr, 'base64').toString('utf8'));
         userId = payloadObj.id || payloadObj.sub || '';
         setMyId(userId);
+        myIdRef.current = userId;
       } catch(e) {}
 
       const response = await fetch(`https://dev-ows-api.telkom-digital.id/v1/messages/${id}?limit=50`, {

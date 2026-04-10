@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { Buffer } from 'buffer';
 import { X, User, CreditCard, Bell, History, LogOut, ChevronRight } from 'lucide-react-native';
 
 export default function ProfileScreen() {
@@ -24,8 +25,8 @@ export default function ProfileScreen() {
         if (token) {
           setIsLoggedIn(true);
           const payloadStr = token.split('.')[1];
-          const payloadObj = JSON.parse(atob(payloadStr));
-          
+          const payloadObj = JSON.parse(Buffer.from(payloadStr, 'base64').toString('utf8'));
+
           setUserData({
             name: payloadObj.name || payloadObj.username || 'Pengguna',
             email: payloadObj.email || 'user@example.com',
@@ -37,9 +38,9 @@ export default function ProfileScreen() {
         } else {
           setIsLoggedIn(false);
           setUserData({
-            name: 'Belum Login',
+            name: 'ACOOUNT',
             email: 'Masuk untuk sinkronisasi data',
-            position: 'Tamu',
+            position: 'guest',
             avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
             nik: '',
             username: ''

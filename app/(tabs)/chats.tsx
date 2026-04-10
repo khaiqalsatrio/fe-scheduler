@@ -35,7 +35,6 @@ export default function ChatsScreen() {
         return;
       }
 
-      // TODO: Sesuaikan mapping response jika ada perbedaan dengan documentation Swagger
       const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
         method: 'GET',
         headers: {
@@ -47,23 +46,27 @@ export default function ChatsScreen() {
       const jsonResp = await response.json();
 
       if (response.ok) {
-        // TODO: Silakan ubah dan hubungkan jsonResp.data di bawah ini sesuai bentuk property dari Swagger BE Anda
-
-        const formattedData: ChatData[] = jsonResp.data.map((item: any) => ({
+        // API docs: jsonResp adalah Array langsung [...]
+        const data = Array.isArray(jsonResp) ? jsonResp : (jsonResp.data || []);
+        
+        const formattedData: ChatData[] = data.map((item: any) => ({
           id: item.id.toString(),
-          name: item.name || "Nama Pengguna",
-          lastMessage: item.last_message || "",
-          time: item.time || "Baru saja",
-          unreadCount: item.unread || 0,
-          isOnline: item.is_online || false
+          // Untuk DM gunakan nama Penerima, untuk Grup gunakan Title
+          name: item.title || item.recipient?.name || "User",
+          lastMessage: item.last_message?.content || "",
+          time: item.last_message?.created_at ? new Date(item.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Baru saja",
+          unreadCount: item.unread_count || 0,
+          isOnline: item.is_online || false,
+          avatar: item.photo_url || item.recipient?.avatar,
+          isGroup: item.type === 'group'
         }));
         setChats(formattedData);
 
       } else {
-        console.error('Gagal memuat list chat:', jsonResp.message);
+        console.warn('Gagal memuat list chat:', jsonResp.message);
       }
     } catch (error) {
-      console.error('Error saat fetch chat:', error);
+      console.warn('Error saat fetch chat:', error);
     } finally {
       setIsLoading(false);
     }

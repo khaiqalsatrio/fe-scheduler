@@ -145,13 +145,15 @@ export default function OnboardingScreen() {
       const data = await response.json();
 
       if (response.ok) {
-        const backendToken = data.token || data.access_token || data?.data?.token;
+        // Mendapatkan token dari berbagai kemungkinan field (data.token atau data.access_token atau data.data.token)
+        const backendToken = data.token || data.access_token || (data.data && data.data.token);
+        
         if (backendToken) {
           await SecureStore.setItemAsync('user_token', backendToken);
-          console.log("Login Google sukses!");
+          console.log("Login Google sukses! Token tersimpan.");
           navigateToHome();
         } else {
-          Alert.alert('Gagal Validasi', 'Server tidak membalas dengan token login.');
+          Alert.alert('Gagal Validasi', 'Server tidak membalas dengan token login yang valid.');
         }
       } else {
         Alert.alert('Gagal Login dengan Google', data.message || 'Verifikasi gagal di server.');

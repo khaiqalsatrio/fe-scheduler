@@ -20,6 +20,7 @@ export default function NewConnectionScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connections, setConnections] = useState<ConnectionData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -40,9 +41,9 @@ export default function NewConnectionScreen() {
         return;
       }
       
-      let url = 'https://dev-ows-api.telkom-digital.id/v1/users?limit=50&page=1';
+      let url = 'https://dev-ows-api.telkom-digital.id/v1/users/recipients?limit=50&page=1';
       if (searchQuery) {
-        url += `&search=${encodeURIComponent(searchQuery)}`;
+        url += `&q=${encodeURIComponent(searchQuery)}`;
       }
 
       const response = await fetch(url, {
@@ -54,26 +55,74 @@ export default function NewConnectionScreen() {
       });
 
       const jsonResp = await response.json();
+      console.log('Search Recipients Result:', jsonResp);
+
       if (response.ok) {
-        // Asumsi data array berada di property data atau items (sesuaikan jika berbeda di Swagger Anda)
-        const data = jsonResp.data || jsonResp.items || Array.isArray(jsonResp) ? jsonResp : [];
+        // Ambil array dari property data, jika tidak ada cek jika jsonResp sendiri adalah array
+        const data = Array.isArray(jsonResp.data) ? jsonResp.data : (Array.isArray(jsonResp) ? jsonResp : []);
+        
         if (Array.isArray(data)) {
-           const formattedData: ConnectionData[] = data.map((item: any) => ({
-             id: item.id?.toString() || Math.random().toString(),
-             name: item.name || item.full_name || item.email || item.username || 'User',
-             role: item.role || item.jobTitle || 'Member',
-             badge: item.badge || '',
-             avatar: item.avatar || '',
-           }));
+            const formattedData: ConnectionData[] = data.map((item: any) => ({
+              id: item.id?.toString() || Math.random().toString(),
+              name: item.name || item.full_name || item.username || 'User',
+              role: item.position || item.role || item.jobTitle || 'Member',
+              badge: item.badge || '',
+              avatar: item.avatar || '',
+            }));
            setConnections(formattedData);
         }
       } else {
-        console.error('Gagal memuat list users:', jsonResp.message);
+        console.warn('Gagal memuat list users:', jsonResp.message);
       }
     } catch (error) {
-      console.error('Error fetch users:', error);
+      console.warn('Error fetch users:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const startChat = async () => {
+    if (!selectedId) return;
+    
+    setIsCreatingChat(true);
+    try {
+      const token = await SecureStore.getItemAsync('user_token');
+      if (!token) {
+        setIsCreatingChat(false);
+        return;
+      }
+
+      // API docs: POST /conversations (multipart/form-data)
+      const formData = new FormData();
+      formData.append('type', 'dm');
+      formData.append('participantIds', selectedId);
+      
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // ID percakapan didapat dari response.id
+        const conversationId = data.id;
+        const personName = connections.find(c => c.id === selectedId)?.name || 'Chat';
+        
+        router.push({
+          pathname: '/chat/[id]',
+          params: { id: conversationId, name: personName }
+        });
+      } else {
+        console.warn('Gagal membuat percakapan:', data.message);
+      }
+    } catch (error) {
+       console.warn('Error starting chat:', error);
+    } finally {
+      setIsCreatingChat(false);
     }
   };
 
@@ -169,13 +218,18 @@ export default function NewConnectionScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity 
+        <TouchableOpacity 
             style={[styles.actionButton, selectedId ? styles.actionButtonActive : styles.actionButtonDisabled]}
-            disabled={!selectedId}
+            disabled={!selectedId || isCreatingChat}
+            onPress={startChat}
           >
-            <Text style={[styles.actionButtonText, selectedId ? styles.actionButtonTextActive : styles.actionButtonTextDisabled]}>
-              Mulai Chat
-            </Text>
+            {isCreatingChat ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={[styles.actionButtonText, selectedId ? styles.actionButtonTextActive : styles.actionButtonTextDisabled]}>
+                Mulai Chat
+              </Text>
+            )}
           </TouchableOpacity>
           <Text style={styles.footerInfoText}>Pilih peserta untuk mulai koneksi</Text>
         </View>
