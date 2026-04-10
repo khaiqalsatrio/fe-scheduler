@@ -52,7 +52,7 @@ export default function ChatsScreen() {
       if (response.ok) {
         // API docs: jsonResp adalah Array langsung [...]
         const data = Array.isArray(jsonResp) ? jsonResp : (jsonResp.data || []);
-        
+
         const formattedData: ChatData[] = data.map((item: any) => ({
           id: item.id.toString(),
           // Untuk DM gunakan nama Penerima, untuk Grup gunakan Title

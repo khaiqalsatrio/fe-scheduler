@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Pin, CheckCheck } from 'lucide-react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
+import { Pin, CheckCheck, FileText } from 'lucide-react-native';
 
 interface MessageBubbleProps {
   message: string;
@@ -13,6 +13,11 @@ interface MessageBubbleProps {
     name: string;
     text: string;
   };
+  file?: {
+    url: string;
+    name: string;
+    type: string;
+  };
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -23,15 +28,31 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isPinned,
   isEdited,
   replyTo,
+  file
 }) => {
+  const isImage = file?.type?.startsWith('image/') || 
+                  file?.url?.toLowerCase().endsWith('.jpg') || 
+                  file?.url?.toLowerCase().endsWith('.png') ||
+                  file?.url?.toLowerCase().endsWith('.jpeg');
+
+  // Jika pesan hanya berisi label placeholder "📷 Gambar", kita anggap tidak ada teks (ala WA)
+  const isOnlyImage = isImage && (message === '📷 Gambar' || !message.trim());
   return (
     <View style={[styles.outerContainer, isMine ? styles.myOuterContainer : styles.theirOuterContainer]}>
       <TouchableOpacity 
         activeOpacity={0.8} 
         onLongPress={onLongPress}
-        style={[styles.container, isMine ? styles.myMessageContainer : styles.theirMessageContainer]}
+        style={[
+          styles.container, 
+          isMine ? styles.myMessageContainer : styles.theirMessageContainer,
+          isImage && { maxWidth: '75%' }
+        ]}
       >
-        <View style={[styles.bubble, isMine ? styles.myBubble : styles.theirBubble]}>
+        <View style={[
+          styles.bubble, 
+          isMine ? styles.myBubble : styles.theirBubble,
+          isOnlyImage && { paddingHorizontal: 4, paddingVertical: 4 }
+        ]}>
           {replyTo && (
             <View style={styles.replyContainer}>
               <View style={styles.replyBar} />
@@ -42,9 +63,34 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             </View>
           )}
           
-          <Text style={[styles.message, isMine ? styles.myMessage : styles.theirMessage]}>
-            {message}
-          </Text>
+          {file && isImage && (
+            <Image 
+              source={{ uri: file.url }} 
+              style={[
+                styles.attachedImage,
+                isOnlyImage && { marginBottom: 2 }
+              ]} 
+              resizeMode="cover"
+            />
+          )}
+
+          {file && !isImage && (
+            <View style={styles.fileContainer}>
+              <View style={styles.fileIconWrapper}>
+                <FileText color="#FFF" size={24} />
+              </View>
+              <View style={styles.fileInfo}>
+                <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+                <Text style={styles.fileType}>{file.type.split('/')[1]?.toUpperCase() || 'FILE'}</Text>
+              </View>
+            </View>
+          )}
+          
+          {!isOnlyImage && (
+            <Text style={[styles.message, isMine ? styles.myMessage : styles.theirMessage]}>
+              {message}
+            </Text>
+          )}
           
           <View style={styles.footer}>
             {isEdited && <Text style={styles.editedLabel}>(diedit)</Text>}
@@ -157,5 +203,43 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     marginLeft: 4,
+  },
+  attachedImage: {
+    width: 250,
+    height: 180,
+    borderRadius: 6,
+    marginBottom: 6,
+    backgroundColor: '#F0F0F0',
+  },
+  fileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 6,
+    minWidth: 200,
+  },
+  fileIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  fileInfo: {
+    flex: 1,
+  },
+  fileName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+  },
+  fileType: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
 });

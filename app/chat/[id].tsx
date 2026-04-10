@@ -21,6 +21,11 @@ interface Message {
     name: string;
     text: string;
   };
+  file?: {
+    url: string;
+    name: string;
+    type: string;
+  };
 }
 
 const INITIAL_MESSAGES: Message[] = [];
@@ -81,7 +86,12 @@ export default function ChatDetailScreen() {
           text: msg.content || '',
           time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           // Tentukan isMine dengan membandingkan sender_id dengan ref myId kita
-          isMine: msg.sender_id === myIdRef.current || msg.is_mine === true
+          isMine: msg.sender_id === myIdRef.current || msg.is_mine === true,
+          file: msg.meta?.file ? {
+            url: msg.meta.file.url,
+            name: msg.meta.file.name || 'file',
+            type: msg.meta.file.type || (msg.type === 'image' ? 'image/jpeg' : 'application/octet-stream'),
+          } : undefined
         };
 
         setMessages(prev => {
@@ -139,10 +149,15 @@ export default function ChatDetailScreen() {
         if (Array.isArray(data)) {
            const formattedMessages = data.map((m: any) => ({
              id: m.client_message_id || m.id?.toString() || Math.random().toString(),
-             text: m.content || m.text || '',
-             time: m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-             isMine: userId ? m.sender_id === userId : (m.is_mine === true),
-           }));
+              text: m.content || m.text || '',
+              time: m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isMine: userId ? m.sender_id === userId : (m.is_mine === true),
+              file: m.meta?.file ? {
+                url: m.meta.file.url,
+                name: m.meta.file.name || 'file',
+                type: m.meta.file.type || (m.type === 'image' ? 'image/jpeg' : 'application/octet-stream'),
+              } : undefined
+            }));
            // Reverse order if descending
            setMessages(formattedMessages.reverse());
         }
@@ -215,6 +230,64 @@ export default function ChatDetailScreen() {
     } catch (e) {
       console.error("Gagal mengirim:", e);
       Alert.alert('Error', 'Kesalahan jaringan saat mengirim pesan.');
+    }
+  };
+
+  const handleFileSend = async (fileAsset: any, type: string) => {
+    const clientId = Date.now().toString();
+    
+    // UI Optimistik
+    const newMessage: Message = {
+      id: clientId,
+      text: type === 'image' ? '📷 Gambar' : `📄 ${fileAsset.name || 'File'}`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isMine: true,
+      file: {
+        url: fileAsset.uri,
+        name: fileAsset.name || 'file',
+        type: fileAsset.mimeType || (type === 'image' ? 'image/jpeg' : 'application/octet-stream'),
+      }
+    };
+    
+    setMessages(prev => [...prev, newMessage]);
+    setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+
+    try {
+      const token = await SecureStore.getItemAsync('user_token');
+      if (!token) return;
+
+      const formData = new FormData();
+      formData.append('conversationId', id as string);
+      formData.append('clientMessageId', clientId);
+      formData.append('type', type); // 'image' or 'file'
+      
+      // Di React Native, FormData memerlukan format khusus ini
+      const fileToUpload = {
+        uri: Platform.OS === 'android' ? fileAsset.uri : fileAsset.uri.replace('file://', ''),
+        type: fileAsset.mimeType || (type === 'image' ? 'image/jpeg' : 'application/octet-stream'),
+        name: fileAsset.name || (type === 'image' ? 'photo.jpg' : 'file'),
+      };
+      
+      formData.append('file', fileToUpload as any);
+
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: formData
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) {
+        Alert.alert('Gagal Mengirim File', resJson.message || 'Gagal mengirim file ke server.');
+      } else {
+        console.log('File sent successfully:', resJson);
+      }
+    } catch (e) {
+      console.error("Gagal mengirim file:", e);
+      Alert.alert('Error', 'Kesalahan jaringan saat mengirim file.');
     }
   };
 
@@ -334,6 +407,7 @@ export default function ChatDetailScreen() {
                 isMine={item.isMine}
                 isPinned={item.isPinned}
                 replyTo={item.replyTo}
+                file={item.file}
                 onLongPress={() => handleLongPress(item)}
               />
             )}
@@ -424,6 +498,7 @@ export default function ChatDetailScreen() {
           editInitialText={editingMessage?.text}
           onUpdate={handleUpdate}
           onCancelEdit={() => setEditingMessage(null)}
+          onFileSend={handleFileSend}
         />
       </View>
 

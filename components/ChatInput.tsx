@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Paperclip, Camera, Mic, Send, X, Check } from 'lucide-react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 
 interface ChatInputProps {
   onSend?: (text: string) => void;
@@ -13,16 +15,18 @@ interface ChatInputProps {
   editInitialText?: string;
   onUpdate?: (text: string) => void;
   onCancelEdit?: () => void;
+  onFileSend?: (file: any, type: string) => void;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ 
-  onSend, 
-  replyingTo, 
+export const ChatInput: React.FC<ChatInputProps> = ({
+  onSend,
+  replyingTo,
   onCancelReply,
   isEditing,
   editInitialText,
   onUpdate,
-  onCancelEdit
+  onCancelEdit,
+  onFileSend
 }) => {
   const [text, setText] = useState('');
 
@@ -42,6 +46,43 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onSend(text);
       }
       setText('');
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        if (onFileSend) {
+          onFileSend(file, 'file');
+        }
+      }
+    } catch (err) {
+      console.warn('Error picking document:', err);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const image = result.assets[0];
+        if (onFileSend) {
+          onFileSend(image, 'image');
+        }
+      }
+    } catch (err) {
+      console.warn('Error picking image:', err);
     }
   };
 
@@ -76,7 +117,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </TouchableOpacity>
           </View>
         )}
-        
+
         <View style={styles.container}>
           <View style={styles.inputWrapper}>
             <TextInput
@@ -87,10 +128,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onChangeText={setText}
               multiline
             />
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity style={styles.iconButton} onPress={pickDocument}>
               <Paperclip color="#666" size={22} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity style={styles.iconButton} onPress={pickImage}>
               <Camera color="#666" size={22} />
             </TouchableOpacity>
           </View>
