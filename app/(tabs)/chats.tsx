@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextInput, Platform, StatusBar, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Camera, MoreVertical, Search, MessageSquarePlus } from 'lucide-react-native';
 import { ChatItem } from '../../components/ChatItem';
 import * as SecureStore from 'expo-secure-store';
+import { useFocusEffect } from '@react-navigation/native';
 
 type ChatData = {
   id: string;
@@ -21,9 +22,11 @@ export default function ChatsScreen() {
   const [chats, setChats] = useState<ChatData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    fetchChatsFromBE();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchChatsFromBE();
+    }, [])
+  );
 
   const fetchChatsFromBE = async () => {
     setIsLoading(true);
@@ -44,6 +47,7 @@ export default function ChatsScreen() {
       });
 
       const jsonResp = await response.json();
+      console.log('Raw Conversations Result:', jsonResp);
 
       if (response.ok) {
         // API docs: jsonResp adalah Array langsung [...]
