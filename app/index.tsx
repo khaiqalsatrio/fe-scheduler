@@ -37,7 +37,7 @@ const ONBOARDING_DATA = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  
+
   // States for Login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,8 +66,8 @@ export default function OnboardingScreen() {
     // KONFIGURASI GOOGLE SIGN IN
     // Anda WAJIB mengganti 'webClientId' di bawah dengan yang ada di Google Cloud Console Anda!
     GoogleSignin.configure({
-      webClientId: 'MASUKKAN_WEB_CLIENT_ID_ANDA_DISINI.apps.googleusercontent.com', 
-      offlineAccess: true, 
+      webClientId: 'MASUKKAN_WEB_CLIENT_ID_ANDA_DISINI.apps.googleusercontent.com',
+      offlineAccess: true,
       forceCodeForRefreshToken: true,
     });
   }, []);
@@ -107,7 +107,7 @@ export default function OnboardingScreen() {
           console.log("Login sukses dan token tersimpan!");
           navigateToHome();
         } else {
-           Alert.alert('Sukses Login', 'Namun tidak mendapatkan token dari API');
+          Alert.alert('Sukses Login', 'Namun tidak mendapatkan token dari API');
         }
       } else {
         Alert.alert('Login Gagal', data.message || 'Harap periksa kembali kredensial Anda.');
@@ -128,7 +128,7 @@ export default function OnboardingScreen() {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
       const googleTokenObj = await GoogleSignin.getTokens();
-      
+
       const googleIdToken = googleTokenObj.idToken;
 
       const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/oauth/google', {
@@ -139,7 +139,7 @@ export default function OnboardingScreen() {
         },
         body: JSON.stringify({
           access_token: googleIdToken
-        }), 
+        }),
       });
 
       const data = await response.json();
@@ -147,11 +147,11 @@ export default function OnboardingScreen() {
       if (response.ok) {
         const backendToken = data.token || data.access_token || data?.data?.token;
         if (backendToken) {
-           await SecureStore.setItemAsync('user_token', backendToken);
-           console.log("Login Google sukses!");
-           navigateToHome();
+          await SecureStore.setItemAsync('user_token', backendToken);
+          console.log("Login Google sukses!");
+          navigateToHome();
         } else {
-           Alert.alert('Gagal Validasi', 'Server tidak membalas dengan token login.');
+          Alert.alert('Gagal Validasi', 'Server tidak membalas dengan token login.');
         }
       } else {
         Alert.alert('Gagal Login dengan Google', data.message || 'Verifikasi gagal di server.');
