@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pin, X, ChevronLeft, User, Video, Phone, MoreVertical, Lock, Sparkles, MessageCircle, FileText, Presentation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { io, Socket } from 'socket.io-client';
 import { MessageBubble } from '../../components/MessageBubble';
 import { ChatInput } from '../../components/ChatInput';
 import { MessageActionMenu } from '../../components/MessageActionMenu';
+import * as SecureStore from 'expo-secure-store';
 
 interface Message {
   id: string;
@@ -20,11 +22,7 @@ interface Message {
   };
 }
 
-const INITIAL_MESSAGES: Message[] = [
-  { id: '1', text: 'Halo! Gimana kabarnya?', time: '10:15', isMine: false },
-  { id: '2', text: 'Baik! Lagi kerja nih. Kamu gimana?', time: '10:17', isMine: true },
-  { id: '3', text: 'Sama, lagi ada project deadlinenya malem ini \ud83d\ude05', time: '10:18', isMine: false },
-];
+const INITIAL_MESSAGES: Message[] = [];
 
 export default function ChatDetailScreen() {
   const { id, name } = useLocalSearchParams();
@@ -36,10 +34,129 @@ export default function ChatDetailScreen() {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [myId, setMyId] = useState<string>('');
 
   // AI Menu State
   const [isAIActionsVisible, setIsAIActionsVisible] = useState(false);
   const aiMenuAnim = useRef(new Animated.Value(0)).current;
+
+  // 1. Inisialisasi Socket.IO
+  useEffect(() => {
+    let newSocket: Socket;
+    const connectSocket = async () => {
+      const token = await SecureStore.getItemAsync('user_token');
+      if (!token) return;
+
+      newSocket = io('https://dev-ows-api.telkom-digital.id', {
+        transports: ['websocket'],
+        auth: { token: `Bearer ${token}` }
+      });
+
+      newSocket.on('connect', () => {
+        console.log('Socket connected:', newSocket.id);
+        newSocket.emit('conversation.join', { conversationId: id });
+        setSocket(newSocket);
+      });
+
+      newSocket.on('message.new', (msg: any) => {
+        // Terjemahkan message data ke Frontend format
+        const newMessage: Message = {
+          id: msg.client_message_id || msg.id,
+          text: msg.content || '',
+          time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          // Jika tidak ada info, anggap bukan milik sendiri secara default
+          isMine: false 
+        };
+
+        setMessages(prev => {
+          // Abaikan jika sudah ada (optimistic UI dari pengirim sendiri)
+          if (prev.some(p => p.id === newMessage.id)) return prev;
+          
+          // Fix logic untuk isMine jika ada sender id dan myId dicocokan
+          // Memastikan kita punya akses scope var myId paling up to date:
+          let verifiedIsMine = false;
+          if (msg.sender_id) {
+             const getRawToken = async () => {
+                const tokenString = await SecureStore.getItemAsync('user_token');
+                if (tokenString) {
+                  try {
+                    const payld = JSON.parse(atob(tokenString.split('.')[1]));
+                    if (payld.id === msg.sender_id || payld.sub === msg.sender_id) verifiedIsMine = true;
+                  } catch (e) {}
+                }
+             };
+             getRawToken();
+          }
+          
+          return [...prev, { ...newMessage, isMine: verifiedIsMine }];
+        });
+
+        setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+      });
+
+      newSocket.on('error', (err) => console.error('Socket error event:', err));
+    };
+
+    connectSocket();
+
+    return () => {
+      if (newSocket) {
+        newSocket.emit('conversation.leave', { conversationId: id });
+        newSocket.disconnect();
+      }
+    };
+  }, [id]);
+
+  // 2. Fetch Riwayat Pesan Awal (REST Endpoint yang benar)
+  useEffect(() => {
+    fetchMessages();
+  }, [id]);
+
+  const fetchMessages = async () => {
+    setIsLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('user_token');
+      if (!token) return;
+
+      let userId = '';
+      try {
+        const payloadStr = token.split('.')[1];
+        const payloadObj = JSON.parse(atob(payloadStr));
+        userId = payloadObj.id || payloadObj.sub || '';
+        setMyId(userId);
+      } catch(e) {}
+
+      const response = await fetch(`https://dev-ows-api.telkom-digital.id/v1/messages/${id}?limit=50`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const jsonResp = await response.json();
+      
+      if (response.ok) {
+        // API docs: jsonResp = { conversation: {}, messages: [] }
+        const data = jsonResp.messages || jsonResp.data || [];
+        if (Array.isArray(data)) {
+           const formattedMessages = data.map((m: any) => ({
+             id: m.client_message_id || m.id?.toString() || Math.random().toString(),
+             text: m.content || m.text || '',
+             time: m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             isMine: userId ? m.sender_id === userId : (m.is_mine === true),
+           }));
+           // Reverse order if descending
+           setMessages(formattedMessages.reverse());
+        }
+      } else {
+        console.log('Gagal ambil histori pesan:', jsonResp.message);
+      }
+    } catch (e) {
+      console.error('Fetch msgs err:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     Animated.timing(aiMenuAnim, {
@@ -55,22 +172,57 @@ export default function ChatDetailScreen() {
 
   const pinnedMessages = messages.filter(m => m.isPinned);
 
-  const handleSend = (text: string) => {
+  const handleSend = async (text: string) => {
+    const clientId = Date.now().toString();
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: clientId,
       text,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMine: true,
       replyTo: replyingTo ? { name: replyingTo.isMine ? 'Anda' : (name as string || 'Teman'), text: replyingTo.text } : undefined,
     };
+    
+    // UI Optimistik Update
     setMessages(prev => [...prev, newMessage]);
     setReplyingTo(null);
     setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+
+    // Proses ke Backend API
+    try {
+      const token = await SecureStore.getItemAsync('user_token');
+      if (!token) return;
+
+      const formData = new FormData();
+      // Menggunakan POST biasa karena ini didalam existing conversation
+      formData.append('conversationId', id as string);
+      formData.append('clientMessageId', clientId);
+      formData.append('type', 'text');
+      formData.append('content', text);
+      if (replyingTo) {
+        formData.append('replyToMessageId', replyingTo.id);
+      }
+
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const resJson = await response.json();
+      if (!response.ok) {
+        Alert.alert('Gagal Mengirim', resJson.message || 'Gagal mengirim pesan ke server.');
+      }
+    } catch (e) {
+      console.error("Gagal mengirim:", e);
+      Alert.alert('Error', 'Kesalahan jaringan saat mengirim pesan.');
+    }
   };
 
   const handleUpdate = (newText: string) => {
     if (!editingMessage) return;
-    setMessages(prev => prev.map(m => 
+    setMessages(prev => prev.map(m =>
       m.id === editingMessage.id ? { ...m, text: newText, isEdited: true } : m
     ));
     setEditingMessage(null);
@@ -83,7 +235,7 @@ export default function ChatDetailScreen() {
 
   const handlePin = () => {
     if (!selectedMessage) return;
-    setMessages(prev => prev.map(m => 
+    setMessages(prev => prev.map(m =>
       m.id === selectedMessage.id ? { ...m, isPinned: !m.isPinned } : m
     ));
     Alert.alert(selectedMessage.isPinned ? 'Sematkan dilepas' : 'Pesan disematkan');
@@ -144,8 +296,8 @@ export default function ChatDetailScreen() {
       <View style={styles.container}>
         {pinnedMessages.length > 0 && (
           <View style={styles.pinnedMessagesBar}>
-            <TouchableOpacity 
-              style={styles.pinnedContent} 
+            <TouchableOpacity
+              style={styles.pinnedContent}
               onPress={() => jumpToMessage(pinnedMessages[0].id)}
             >
               <Pin size={16} color="#00BCD4" style={styles.pinnedIcon} />
@@ -159,33 +311,39 @@ export default function ChatDetailScreen() {
             </TouchableOpacity>
           </View>
         )}
-        
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={() => (
-            <View style={styles.encryptedBannerWrapper}>
-              <View style={styles.encryptedBanner}>
-                <Lock color="#D4A106" size={14} style={{ marginRight: 6 }} />
-                <Text style={styles.encryptedText}>Messages are end-to-end encrypted</Text>
+
+        {isLoading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#25D366" />
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={() => (
+              <View style={styles.encryptedBannerWrapper}>
+                <View style={styles.encryptedBanner}>
+                  <Lock color="#D4A106" size={14} style={{ marginRight: 6 }} />
+                  <Text style={styles.encryptedText}>Messages are end-to-end encrypted</Text>
+                </View>
               </View>
-            </View>
-          )}
-          renderItem={({ item }) => (
-            <MessageBubble
-              message={item.text}
-              time={item.time}
-              isMine={item.isMine}
-              isPinned={item.isPinned}
-              replyTo={item.replyTo}
-              onLongPress={() => handleLongPress(item)}
-            />
-          )}
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-        />
+            )}
+            renderItem={({ item }) => (
+              <MessageBubble
+                message={item.text}
+                time={item.time}
+                isMine={item.isMine}
+                isPinned={item.isPinned}
+                replyTo={item.replyTo}
+                onLongPress={() => handleLongPress(item)}
+              />
+            )}
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+          />
+        )}
 
         {/* AI Action Menu */}
         {isAIActionsVisible && (
@@ -193,8 +351,8 @@ export default function ChatDetailScreen() {
             <View style={styles.aiOverlay} />
           </TouchableWithoutFeedback>
         )}
-        
-        <Animated.View 
+
+        <Animated.View
           style={[
             styles.aiMenuContainer,
             {
@@ -217,9 +375,9 @@ export default function ChatDetailScreen() {
                 <Text style={styles.aiMenuDesc}>Tanyakan apa saja ke AI</Text>
               </View>
             </TouchableOpacity>
-            
+
             <View style={styles.aiMenuDivider} />
-            
+
             <TouchableOpacity style={styles.aiMenuItem} onPress={() => setIsAIActionsVisible(false)}>
               <View style={[styles.aiIconWrapper, { backgroundColor: '#E0F2FE' }]}>
                 <FileText color="#0EA5E9" size={22} />
@@ -229,9 +387,9 @@ export default function ChatDetailScreen() {
                 <Text style={styles.aiMenuDesc}>Ubah chat jadi poin penting</Text>
               </View>
             </TouchableOpacity>
-            
+
             <View style={styles.aiMenuDivider} />
-            
+
             <TouchableOpacity style={styles.aiMenuItem} onPress={() => setIsAIActionsVisible(false)}>
               <View style={[styles.aiIconWrapper, { backgroundColor: '#DCFCE7' }]}>
                 <Presentation color="#22C55E" size={22} />
@@ -245,8 +403,8 @@ export default function ChatDetailScreen() {
         </Animated.View>
 
         {/* AI Sparkle Button */}
-        <TouchableOpacity 
-          style={styles.sparkleButton} 
+        <TouchableOpacity
+          style={styles.sparkleButton}
           activeOpacity={0.8}
           onPress={toggleAIMenu}
         >
@@ -260,7 +418,7 @@ export default function ChatDetailScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        <ChatInput 
+        <ChatInput
           replyingTo={replyingTo ? { name: replyingTo.isMine ? 'Anda' : (name as string || 'Teman'), text: replyingTo.text } : null}
           onCancelReply={() => setReplyingTo(null)}
           onSend={handleSend}

@@ -1,26 +1,83 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, ScrollView, FlatList, Platform, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, ScrollView, FlatList, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Search, User } from 'lucide-react-native';
+import * as SecureStore from 'expo-secure-store';
 
 const CATEGORIES = ['Semua', 'Speaker', 'Designer', 'PM', 'Engineer'];
 
-const DUMMY_CONNECTIONS = [
-  { id: '1', name: 'Bima Santoso', badge: 'Speaker', role: 'Product Manager • Telkom' },
-  { id: '2', name: 'Kia Rahma', role: 'Data Analyst • Telkom' },
-  { id: '3', name: 'Andi Wijaya', badge: 'Mentor', role: 'UI/UX Designer • Gojek' },
-  { id: '4', name: 'Sarah Putri', role: 'Frontend Engineer • Tokopedia' },
-  { id: '5', name: 'Dimas Prakoso', badge: 'Speaker', role: 'Product Manager • Bukalapak' },
-  { id: '6', name: 'Lisa Amelia', role: 'Backend Engineer • Shopee' },
-  { id: '7', name: 'Reza Firmansyah', role: 'Software Engineer • Traveloka' },
-];
+type ConnectionData = {
+  id: string;
+  name: string;
+  badge?: string;
+  role?: string;
+  avatar?: string;
+};
 
 export default function NewConnectionScreen() {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [connections, setConnections] = useState<ConnectionData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const renderConnectionItem = ({ item }: { item: typeof DUMMY_CONNECTIONS[0] }) => {
+  useEffect(() => {
+    // Debounce pencarian agar tidak memanggil API di setiap huruf yang diketik
+    const delayDebounceFn = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('user_token');
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      
+      let url = 'https://dev-ows-api.telkom-digital.id/v1/users?limit=50&page=1';
+      if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const jsonResp = await response.json();
+      if (response.ok) {
+        // Asumsi data array berada di property data atau items (sesuaikan jika berbeda di Swagger Anda)
+        const data = jsonResp.data || jsonResp.items || Array.isArray(jsonResp) ? jsonResp : [];
+        if (Array.isArray(data)) {
+           const formattedData: ConnectionData[] = data.map((item: any) => ({
+             id: item.id?.toString() || Math.random().toString(),
+             name: item.name || item.full_name || item.email || item.username || 'User',
+             role: item.role || item.jobTitle || 'Member',
+             badge: item.badge || '',
+             avatar: item.avatar || '',
+           }));
+           setConnections(formattedData);
+        }
+      } else {
+        console.error('Gagal memuat list users:', jsonResp.message);
+      }
+    } catch (error) {
+      console.error('Error fetch users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderConnectionItem = ({ item }: { item: ConnectionData }) => {
     const isSelected = selectedId === item.id;
     return (
       <TouchableOpacity 
@@ -68,6 +125,8 @@ export default function NewConnectionScreen() {
               placeholder="Cari nama, role, atau instansi" 
               style={styles.searchInput} 
               placeholderTextColor="#999" 
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
         </View>
@@ -90,12 +149,23 @@ export default function NewConnectionScreen() {
         </View>
 
         {/* List */}
-        <FlatList
-          data={DUMMY_CONNECTIONS}
-          keyExtractor={(item) => item.id}
-          renderItem={renderConnectionItem}
-          contentContainerStyle={styles.listContent}
-        />
+        {isLoading && connections.length === 0 ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#25D366" />
+          </View>
+        ) : (
+          <FlatList
+            data={connections}
+            keyExtractor={(item) => item.id}
+            renderItem={renderConnectionItem}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Text style={{ color: '#999', fontSize: 16 }}>Tidak ada user ditemukan</Text>
+              </View>
+            }
+          />
+        )}
 
         {/* Footer */}
         <View style={styles.footer}>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
 const ONBOARDING_DATA = [
   {
@@ -35,7 +37,14 @@ const ONBOARDING_DATA = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  
+  // States for Login
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // States for Slider
   const [currentIndex, setCurrentIndex] = useState(0);
   const { width } = useWindowDimensions();
   const slideWidth = width - 40; // Subtract paddingHorizontal of the container
@@ -53,8 +62,114 @@ export default function OnboardingScreen() {
     return () => clearInterval(timer);
   }, [currentIndex, slideWidth]);
 
+  useEffect(() => {
+    // KONFIGURASI GOOGLE SIGN IN
+    // Anda WAJIB mengganti 'webClientId' di bawah dengan yang ada di Google Cloud Console Anda!
+    GoogleSignin.configure({
+      webClientId: 'MASUKKAN_WEB_CLIENT_ID_ANDA_DISINI.apps.googleusercontent.com', 
+      offlineAccess: true, 
+      forceCodeForRefreshToken: true,
+    });
+  }, []);
+
   const navigateToHome = () => {
     router.replace('/(tabs)/chats');
+  };
+
+  // --- Fungsi Login Biasa ---
+  const loginApp = async () => {
+    if (!email || !password) {
+      Alert.alert('Gagal', 'Silakan isi email dan password terlebih dahulu');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          username: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const token = data.token || data.access_token || data?.data?.token;
+
+        if (token) {
+          await SecureStore.setItemAsync('user_token', token);
+          console.log("Login sukses dan token tersimpan!");
+          navigateToHome();
+        } else {
+           Alert.alert('Sukses Login', 'Namun tidak mendapatkan token dari API');
+        }
+      } else {
+        Alert.alert('Login Gagal', data.message || 'Harap periksa kembali kredensial Anda.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Gagal menyambung ke server.');
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- Fungsi Login Menggunakan Google ---
+  const loginWithGoogle = async () => {
+    setIsGoogleLoading(true);
+    try {
+      console.log('Memulai proses Google Sign-In...');
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const googleTokenObj = await GoogleSignin.getTokens();
+      
+      const googleIdToken = googleTokenObj.idToken;
+
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/oauth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          access_token: googleIdToken
+        }), 
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const backendToken = data.token || data.access_token || data?.data?.token;
+        if (backendToken) {
+           await SecureStore.setItemAsync('user_token', backendToken);
+           console.log("Login Google sukses!");
+           navigateToHome();
+        } else {
+           Alert.alert('Gagal Validasi', 'Server tidak membalas dengan token login.');
+        }
+      } else {
+        Alert.alert('Gagal Login dengan Google', data.message || 'Verifikasi gagal di server.');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('User menekan cancel pada dialog google sign-in');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        Alert.alert('Info', 'Proses Login Google sedang berlangsung');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services tidak tersedia di perangkat ini.');
+      } else {
+        Alert.alert('Error', 'Gagal menghubungkan dengan Google.');
+        console.error('Google Sign In Error:', error);
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -128,12 +243,27 @@ export default function OnboardingScreen() {
               autoCapitalize="none"
             />
 
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
             <TouchableOpacity
-              style={styles.nextButton}
+              style={[styles.nextButton, isLoading && styles.buttonDisabled]}
               activeOpacity={0.8}
-              onPress={navigateToHome}
+              onPress={loginApp}
+              disabled={isLoading || isGoogleLoading}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.nextButtonText}>Login</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.dividerContainer}>
@@ -143,15 +273,22 @@ export default function OnboardingScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.googleButton}
+              style={[styles.googleButton, isGoogleLoading && styles.buttonDisabled]}
               activeOpacity={0.7}
-              onPress={navigateToHome}
+              onPress={loginWithGoogle}
+              disabled={isLoading || isGoogleLoading}
             >
-              <Image
-                source={{ uri: 'https://img.icons8.com/color/48/000000/google-logo.png' }}
-                style={styles.googleIcon}
-              />
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
+              {isGoogleLoading ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <>
+                  <Image
+                    source={{ uri: 'https://img.icons8.com/color/48/000000/google-logo.png' }}
+                    style={styles.googleIcon}
+                  />
+                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -199,8 +336,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -40, // slightly adjust vertical center
+    justifyContent: 'flex-end',
+    marginBottom: 20,
+    marginTop: -80, // slightly adjust vertical center as before but with space
   },
   illustrationContainer: {
     width: 200,
@@ -222,7 +360,7 @@ const styles = StyleSheet.create({
   textContainer: {
     width: '100%',
     alignItems: 'flex-start',
-    marginBottom: 30,
+    marginBottom: 10,
   },
   titleText: {
     fontSize: 24,
@@ -245,7 +383,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 20,
     gap: 10,
   },
   progressDot: {
@@ -267,24 +405,27 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#333',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   nextButton: {
     backgroundColor: '#74C69D', // Light green matches image
     borderRadius: 24,
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   nextButtonText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: '700',
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   dividerLine: {
     flex: 1,

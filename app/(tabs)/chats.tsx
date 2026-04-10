@@ -1,8 +1,9 @@
-import React from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextInput, Platform, StatusBar, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextInput, Platform, StatusBar, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Camera, MoreVertical, Search, MessageSquarePlus } from 'lucide-react-native';
 import { ChatItem } from '../../components/ChatItem';
+import * as SecureStore from 'expo-secure-store';
 
 type ChatData = {
   id: string;
@@ -15,50 +16,58 @@ type ChatData = {
   avatar?: string;
 };
 
-const DUMMY_CHATS: ChatData[] = [
-  {
-    id: '1',
-    name: 'Ahmad Zaki',
-    lastMessage: 'Oke, nanti aku coba deh. Thanks ya!',
-    time: '10:05',
-    unreadCount: 2,
-    isOnline: true,
-  },
-  {
-    id: '2',
-    name: 'Sarah Nur',
-    lastMessage: 'Hahaha iya bener banget 😂',
-    time: 'Yesterday',
-    unreadCount: 0,
-  },
-  {
-    id: '3',
-    name: 'Dev Team 🚀',
-    lastMessage: 'Ahmad: Gimana progress sprint ini?',
-    time: '09:30',
-    unreadCount: 5,
-    isGroup: true,
-  },
-  {
-    id: '4',
-    name: 'Budi Santoso',
-    lastMessage: 'Besok meeting jam berapa?',
-    time: 'Monday',
-    unreadCount: 0,
-    isOnline: true,
-  },
-  {
-    id: '5',
-    name: 'Project Alpha',
-    lastMessage: "Sarah: @Al what's the best way to optin",
-    time: 'Friday',
-    unreadCount: 0,
-    isGroup: true,
-  },
-];
-
 export default function ChatsScreen() {
   const router = useRouter();
+  const [chats, setChats] = useState<ChatData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchChatsFromBE();
+  }, []);
+
+  const fetchChatsFromBE = async () => {
+    setIsLoading(true);
+    try {
+      const token = await SecureStore.getItemAsync('user_token');
+      if (!token) {
+        console.log('User belum login / tidak ada token');
+        setIsLoading(false);
+        return;
+      }
+
+      // TODO: Sesuaikan mapping response jika ada perbedaan dengan documentation Swagger
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const jsonResp = await response.json();
+
+      if (response.ok) {
+        // TODO: Silakan ubah dan hubungkan jsonResp.data di bawah ini sesuai bentuk property dari Swagger BE Anda
+
+        const formattedData: ChatData[] = jsonResp.data.map((item: any) => ({
+          id: item.id.toString(),
+          name: item.name || "Nama Pengguna",
+          lastMessage: item.last_message || "",
+          time: item.time || "Baru saja",
+          unreadCount: item.unread || 0,
+          isOnline: item.is_online || false
+        }));
+        setChats(formattedData);
+
+      } else {
+        console.error('Gagal memuat list chat:', jsonResp.message);
+      }
+    } catch (error) {
+      console.error('Error saat fetch chat:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleChatPress = (id: string, name: string) => {
     router.push({
@@ -101,7 +110,9 @@ export default function ChatsScreen() {
       </View>
 
       <FlatList
-        data={DUMMY_CHATS}
+        data={chats}
+        refreshing={isLoading}
+        onRefresh={fetchChatsFromBE}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ChatItem

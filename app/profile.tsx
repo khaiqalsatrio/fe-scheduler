@@ -1,17 +1,72 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { X, User, CreditCard, Bell, History, LogOut, ChevronRight } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState({
+    name: 'Loading...',
+    email: 'loading@example.com',
+    position: 'Please wait...',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
+    nik: '',
+    username: ''
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = await SecureStore.getItemAsync('user_token');
+        if (token) {
+          setIsLoggedIn(true);
+          const payloadStr = token.split('.')[1];
+          const payloadObj = JSON.parse(atob(payloadStr));
+          
+          setUserData({
+            name: payloadObj.name || payloadObj.username || 'Pengguna',
+            email: payloadObj.email || 'user@example.com',
+            position: payloadObj.position || payloadObj.role || 'Member',
+            avatar: payloadObj.avatar || payloadObj.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
+            nik: payloadObj.nik || '',
+            username: payloadObj.username || ''
+          });
+        } else {
+          setIsLoggedIn(false);
+          setUserData({
+            name: 'Belum Login',
+            email: 'Masuk untuk sinkronisasi data',
+            position: 'Tamu',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
+            nik: '',
+            username: ''
+          });
+        }
+      } catch (e) {
+        console.error('Failed to parse token in profile:', e);
+      }
+    };
+    fetchUser();
+  }, []);
+
   const handleBack = () => {
     router.back();
   };
 
-  const handleLogout = () => {
-    // Navigate back to the onboarding/root
+  const handleLogout = async () => {
+    try {
+      await SecureStore.deleteItemAsync('user_token');
+      // Navigate back to the onboarding/root
+      router.replace('/');
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+  };
+
+  const handleLogin = () => {
     router.replace('/');
   };
 
@@ -47,12 +102,12 @@ export default function ProfileScreen() {
           {/* USER INFO */}
           <View style={styles.userInfoSection}>
             <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80' }}
+              source={{ uri: userData.avatar }}
               style={styles.avatar}
             />
             <View style={styles.userTextContainer}>
-              <Text style={styles.userName}>Khaiqal Satrio</Text>
-              <Text style={styles.userPhone}>+62 812-3456-7890</Text>
+              <Text style={styles.userName}>{userData.name}</Text>
+              <Text style={styles.userPhone}>{userData.position || userData.email}</Text>
             </View>
           </View>
 
@@ -81,15 +136,26 @@ export default function ProfileScreen() {
             />
           </View>
 
-          {/* LOGOUT BUTTON */}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.8}
-            onPress={handleLogout}
-          >
-            <LogOut size={20} color="#E53935" />
-            <Text style={styles.logoutText}>Log Out</Text>
-          </TouchableOpacity>
+          {/* AUTH BUTTON */}
+          {isLoggedIn ? (
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.8}
+              onPress={handleLogout}
+            >
+              <LogOut size={20} color="#E53935" />
+              <Text style={styles.logoutText}>Log Out</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.logoutButton, { borderColor: '#0F9D58' }]}
+              activeOpacity={0.8}
+              onPress={handleLogin}
+            >
+              <User size={20} color="#0F9D58" />
+              <Text style={[styles.logoutText, { color: '#0F9D58' }]}>Log In Sekarang</Text>
+            </TouchableOpacity>
+          )}
 
           {/* APP VERSION */}
           <View style={styles.footer}>
