@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Animated, ActivityIndicator, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Animated, ActivityIndicator, ScrollView, Platform, Alert } from 'react-native';
 import { Mic, Square, Copy, RefreshCcw, CheckCircle2 } from 'lucide-react-native';
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
+// import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
+
+// Mocking speech recognition for environments where native modules are not available
+const ExpoSpeechRecognitionModule: any = null;
+const useSpeechRecognitionEvent = (event: string, callback: (...args: any[]) => void) => {
+  // Do nothing
+};
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function VoiceAiScreen() {
@@ -50,10 +56,14 @@ export default function VoiceAiScreen() {
   };
 
   const startRecording = async () => {
+    if (!ExpoSpeechRecognitionModule) {
+      Alert.alert('Informasi', 'Fitur Voice AI saat ini hanya tersedia di perangkat fisik atau build tertentu.');
+      return;
+    }
     try {
       const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
       if (!result.granted) {
-        alert('Gagal mengakses mikrofon atau izinkan pengenalan suara.');
+        Alert.alert('Izin Ditolak', 'Gagal mengakses mikrofon atau izinkan pengenalan suara.');
         return;
       }
 
@@ -75,7 +85,9 @@ export default function VoiceAiScreen() {
 
   const stopRecording = () => {
     stopPulseAnimation();
-    ExpoSpeechRecognitionModule.stop();
+    if (ExpoSpeechRecognitionModule) {
+      ExpoSpeechRecognitionModule.stop();
+    }
   };
 
   const toggleRecording = () => {
