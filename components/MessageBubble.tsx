@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { Pin, Check, CheckCheck, FileText, Play, Pause, Mic } from 'lucide-react-native';
+import { Pin, Check, CheckCheck, FileText, Play, Pause, Mic, Ban } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 
 interface MessageBubbleProps {
+  id: string;
   message: string;
   time: string;
   isMine: boolean;
@@ -20,9 +21,21 @@ interface MessageBubbleProps {
     name: string;
     type: string;
   };
+  isPlaying?: boolean;
+  onVoiceFinish?: (id: string) => void;
+  onPlayStarted?: (id: string) => void;
+  reactions?: {
+    emoji: string;
+    user_id: string;
+    user?: { name: string };
+  }[];
+  myUserId?: string;
+  onReactionPress?: (emoji: string) => void;
+  isDeleted?: boolean;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
+  id,
   message,
   time,
   isMine,
@@ -31,7 +44,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isEdited,
   status = 'sent',
   replyTo,
-  file
+  file,
+  isPlaying: forcePlay,
+  onVoiceFinish,
+  onPlayStarted,
+  reactions = [],
+  myUserId,
+  onReactionPress,
+  isDeleted
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -53,48 +73,72 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isOnlyImage = isImage && (message === '📷 Gambar' || !message.trim());
   const isOnlyVoice = isVoice && (message === '🎤 Pesan Suara' || !message.trim());
 
+  const soundRef = useRef<Audio.Sound | null>(null);
+
   useEffect(() => {
     return () => {
-      if (sound) {
-        sound.unloadAsync();
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
       }
     };
-  }, [sound]);
+  }, []);
+
+  // Effect untuk menangani autoplay dari luar
+  useEffect(() => {
+    if (forcePlay && isVoice && !isPlaying && !isLoadingAudio) {
+      handlePlayPause();
+    }
+  }, [forcePlay]);
 
   const onPlaybackStatusUpdate = (status: any) => {
-    if (status.isLoaded) {
-      setPosition(status.positionMillis);
-      setDuration(status.durationMillis || 0);
-      setIsPlaying(status.isPlaying);
-      if (status.didJustFinish) {
-        setIsPlaying(false);
-        setPosition(0);
-        sound?.setPositionAsync(0);
+    if (!status.isLoaded) {
+      if (status.error) {
+        console.error(`Playback error: ${status.error}`);
       }
+      return;
+    }
+
+    setPosition(status.positionMillis);
+    setDuration(status.durationMillis || 0);
+    setIsPlaying(status.isPlaying);
+
+    if (status.didJustFinish) {
+      setIsPlaying(false);
+      setPosition(0);
+      soundRef.current?.stopAsync();
+      soundRef.current?.setPositionAsync(0);
+      if (onVoiceFinish) onVoiceFinish(id);
     }
   };
 
   const handlePlayPause = async () => {
-    if (sound) {
-      if (isPlaying) {
-        await sound.pauseAsync();
-      } else {
-        await sound.playAsync();
-      }
-    } else if (file?.url) {
-      try {
+    try {
+      if (soundRef.current) {
+        const status: any = await soundRef.current.getStatusAsync();
+        if (status.isPlaying) {
+          await soundRef.current.pauseAsync();
+        } else {
+          if (status.didJustFinish || status.positionMillis >= (status.durationMillis || 0)) {
+            await soundRef.current.setPositionAsync(0);
+          }
+          await soundRef.current.playAsync();
+          if (onPlayStarted) onPlayStarted(id);
+        }
+      } else if (file?.url) {
         setIsLoadingAudio(true);
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: file.url },
           { shouldPlay: true },
           onPlaybackStatusUpdate
         );
+        soundRef.current = newSound;
         setSound(newSound);
-      } catch (error) {
-        console.error('Error loading sound', error);
-      } finally {
-        setIsLoadingAudio(false);
+        if (onPlayStarted) onPlayStarted(id);
       }
+    } catch (error) {
+      console.error('Error in handlePlayPause', error);
+    } finally {
+      setIsLoadingAudio(false);
     }
   };
 
@@ -108,20 +152,30 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   return (
     <View style={[styles.outerContainer, isMine ? styles.myOuterContainer : styles.theirOuterContainer]}>
       <TouchableOpacity 
-        activeOpacity={0.8} 
-        onLongPress={onLongPress}
+        activeOpacity={isDeleted ? 1 : 0.8} 
+        onLongPress={isDeleted ? undefined : onLongPress}
         style={[
           styles.container, 
           isMine ? styles.myMessageContainer : styles.theirMessageContainer,
-          isImage && { maxWidth: '75%' }
+          isImage && !isDeleted && { maxWidth: '75%' }
         ]}
       >
         <View style={[
           styles.bubble, 
-          isMine ? styles.myBubble : styles.theirBubble,
-          isOnlyImage && { paddingHorizontal: 4, paddingVertical: 4 }
+          isMine ? (isDeleted ? styles.myDeletedBubble : styles.myBubble) : (isDeleted ? styles.theirDeletedBubble : styles.theirBubble),
+          isOnlyImage && !isDeleted && { paddingHorizontal: 4, paddingVertical: 4 }
         ]}>
-          {replyTo && (
+          {isDeleted ? (
+            <View style={styles.deletedContainer}>
+              <Ban size={16} color="#999" style={styles.deletedIcon} />
+              <Text style={styles.deletedText}>
+                {isMine ? 'Anda menghapus pesan ini' : 'Pesan ini telah dihapus'}
+              </Text>
+              <Text style={styles.timeDeleted}>{time}</Text>
+            </View>
+          ) : (
+            <>
+              {replyTo && (
             <View style={styles.replyContainer}>
               <View style={styles.replyBar} />
               <View style={styles.replyContent}>
@@ -144,30 +198,38 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
           {file && isVoice && (
             <View style={styles.voiceContainer}>
-              <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
-                {isLoadingAudio ? (
-                  <ActivityIndicator size="small" color={isMine ? "#00BCD4" : "#25D366"} />
-                ) : isPlaying ? (
-                  <Pause color={isMine ? "#00BCD4" : "#25D366"} size={28} fill={isMine ? "#00BCD4" : "#25D366"} />
-                ) : (
-                  <Play color={isMine ? "#00BCD4" : "#25D366"} size={28} fill={isMine ? "#00BCD4" : "#25D366"} />
-                )}
-              </TouchableOpacity>
-              
-              <View style={styles.voiceWaveformContainer}>
-                <View style={styles.progressBarBackground}>
-                  <View 
-                    style={[
-                      styles.progressBarFill, 
-                      { width: duration > 0 ? `${(position / duration) * 100}%` : '0%' }
-                    ]} 
-                  />
-                </View>
-                <View style={styles.voiceFooter}>
-                  <Text style={styles.voiceDuration}>
-                    {isPlaying || position > 0 ? formatTime(position) : formatTime(duration)}
-                  </Text>
-                  <Mic size={12} color="#999" />
+              <View style={styles.voiceLayout}>
+                <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
+                  {isLoadingAudio ? (
+                    <ActivityIndicator size="small" color={isMine ? "#00BCD4" : "#999"} />
+                  ) : isPlaying ? (
+                    <Pause color={isMine ? "#00BCD4" : "#666"} size={32} fill={isMine ? "#00BCD4" : "#666"} />
+                  ) : (
+                    <Play color={isMine ? "#00BCD4" : "#666"} size={32} fill={isMine ? "#00BCD4" : "#666"} />
+                  )}
+                </TouchableOpacity>
+                
+                <View style={styles.voiceRightSide}>
+                  <View style={styles.progressBarBackground}>
+                    <View 
+                      style={[
+                        styles.progressBarFill, 
+                        { 
+                          width: duration > 0 ? `${(position / duration) * 100}%` : '0%',
+                          backgroundColor: isMine ? '#00BCD4' : '#666'
+                        }
+                      ]} 
+                    />
+                    <View style={styles.progressHandle} />
+                  </View>
+                  <View style={styles.voiceFooter}>
+                    <Text style={styles.voiceDuration}>
+                      {isPlaying || position > 0 ? formatTime(position) : formatTime(duration)}
+                    </Text>
+                    <View style={styles.voiceMicIcon}>
+                      <Mic size={14} color={position > 0 || isPlaying ? "#34B7F1" : "#999"} />
+                    </View>
+                  </View>
                 </View>
               </View>
             </View>
@@ -202,9 +264,34 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <CheckCheck size={14} color={status === 'read' ? "#34B7F1" : "#999"} style={styles.checkIcon} />
               )
             )}
-          </View>
+            </View>
+          </>
+          )}
         </View>
       </TouchableOpacity>
+      
+      {reactions.length > 0 && !isDeleted && (
+        <View style={[styles.reactionsContainer, isMine ? styles.myReactions : styles.theirReactions]}>
+          {Object.entries(
+            reactions.reduce((acc: any, curr) => {
+              acc[curr.emoji] = (acc[curr.emoji] || 0) + 1;
+              return acc;
+            }, {})
+          ).map(([emoji, count]: [string, any]) => {
+            const hasMyReaction = reactions.some(r => r.emoji === emoji && r.user_id === myUserId);
+            return (
+              <TouchableOpacity
+                key={emoji}
+                style={[styles.reactionChip, hasMyReaction && styles.myReactionChip]}
+                onPress={() => onReactionPress?.(emoji)}
+              >
+                <Text style={styles.reactionEmoji}>{emoji}</Text>
+                {count > 1 && <Text style={styles.reactionCount}>{count}</Text>}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 };
@@ -243,8 +330,18 @@ const styles = StyleSheet.create({
   myBubble: {
     backgroundColor: '#E6F0FA', // Light blueish grey
   },
+  myDeletedBubble: {
+    backgroundColor: '#D9FDD3', // WhatsApp sender deleted green
+    borderWidth: 1,
+    borderColor: '#C1E9BA',
+  },
   theirBubble: {
     backgroundColor: '#FFFFFF',
+  },
+  theirDeletedBubble: {
+    backgroundColor: '#F0F2F5', // WhatsApp receiver deleted grey
+    borderWidth: 1,
+    borderColor: '#E1E4E8',
   },
   replyContainer: {
     flexDirection: 'row',
@@ -295,6 +392,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginRight: 4,
     fontStyle: 'italic',
+  },
+  deletedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 150,
+    paddingVertical: 2,
+  },
+  deletedIcon: {
+    marginRight: 8,
+  },
+  deletedText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    flex: 1,
+  },
+  timeDeleted: {
+    fontSize: 10,
+    color: '#999',
+    marginLeft: 10,
   },
   time: {
     fontSize: 10,
@@ -348,37 +465,44 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   voiceContainer: {
+    paddingVertical: 4,
+    minWidth: 220,
+  },
+  voiceLayout: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderRadius: 8,
-    marginBottom: 6,
-    minWidth: 200,
   },
   playButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 4,
   },
-  voiceWaveformContainer: {
+  voiceRightSide: {
     flex: 1,
+    paddingRight: 5,
   },
   progressBarBackground: {
     height: 3,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
     borderRadius: 1.5,
     width: '100%',
-    marginBottom: 6,
+    marginBottom: 8,
+    position: 'relative',
+    justifyContent: 'center',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#00BCD4',
     borderRadius: 1.5,
+  },
+  progressHandle: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'transparent', // Can be made visible if needed
+    right: -5,
   },
   voiceFooter: {
     flexDirection: 'row',
@@ -386,7 +510,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   voiceDuration: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#666',
+    fontVariant: ['tabular-nums'],
+  },
+  voiceMicIcon: {
+    marginLeft: 5,
+  },
+  reactionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: -8, // Overlay slightly on bubble
+    zIndex: 10,
+    elevation: 2,
+    paddingHorizontal: 8,
+  },
+  myReactions: {
+    justifyContent: 'flex-end',
+    marginRight: 15,
+  },
+  theirReactions: {
+    justifyContent: 'flex-start',
+    marginLeft: 15,
+  },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F2F5',
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginRight: 4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#FFF',
+  },
+  myReactionChip: {
+    backgroundColor: '#D1FAE5',
+    borderColor: '#34D399',
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionCount: {
+    fontSize: 11,
+    marginLeft: 2,
+    color: '#666',
+    fontWeight: '600',
   },
 });

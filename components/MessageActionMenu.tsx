@@ -1,16 +1,19 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
-import { Reply, Pin, Copy, Trash2, Edit2 } from 'lucide-react-native';
-
+import { EmojiPicker } from './EmojiPicker';
+import { Reply, Pin, Copy, Trash2, Edit2, Forward } from 'lucide-react-native';
 interface MessageActionMenuProps {
   visible: boolean;
   onClose: () => void;
   onReply: () => void;
   onEdit: () => void;
   onPin: () => void;
+  onForward: () => void;
   onCopy: () => void;
   onDelete: () => void;
+  onReact: (emoji: string) => void;
   isPinned?: boolean;
+  canEdit?: boolean;
 }
 
 export const MessageActionMenu: React.FC<MessageActionMenuProps> = ({
@@ -19,10 +22,17 @@ export const MessageActionMenu: React.FC<MessageActionMenuProps> = ({
   onReply,
   onEdit,
   onPin,
+  onForward,
   onCopy,
   onDelete,
+  onReact,
   isPinned = false,
+  canEdit = false,
 }) => {
+  const [isEmojiPickerVisible, setIsEmojiPickerVisible] = React.useState(false);
+  const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+
   return (
     <Modal
       visible={visible}
@@ -34,15 +44,51 @@ export const MessageActionMenu: React.FC<MessageActionMenuProps> = ({
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.menuContainer}>
+              <View style={styles.reactionRow}>
+                {quickReactions.map((emoji) => (
+                  <TouchableOpacity 
+                    key={emoji} 
+                    style={styles.reactionButton}
+                    onPress={() => { onReact(emoji); onClose(); }}
+                  >
+                    <Text style={styles.reactionEmojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity 
+                  style={styles.reactionButton}
+                  onPress={() => setIsEmojiPickerVisible(true)}
+                >
+                  <Text style={styles.plusEmojiText}>+</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.divider} />
+
+              <EmojiPicker
+                visible={isEmojiPickerVisible}
+                onClose={() => setIsEmojiPickerVisible(false)}
+                onSelect={(emoji) => {
+                  onReact(emoji);
+                  onClose(); // Close the main menu too
+                }}
+              />
+
               <TouchableOpacity style={styles.menuItem} onPress={() => { onReply(); onClose(); }}>
                 <Reply size={20} color="#333" />
                 <Text style={styles.menuText}>Balas</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.menuItem} onPress={() => { onEdit(); onClose(); }}>
-                <Edit2 size={20} color="#333" />
-                <Text style={styles.menuText}>Edit</Text>
+              <TouchableOpacity style={styles.menuItem} onPress={() => { onForward(); onClose(); }}>
+                <Forward size={20} color="#333" />
+                <Text style={styles.menuText}>Teruskan</Text>
               </TouchableOpacity>
+              
+              {canEdit && (
+                <TouchableOpacity style={styles.menuItem} onPress={() => { onEdit(); onClose(); }}>
+                  <Edit2 size={20} color="#333" />
+                  <Text style={styles.menuText}>Edit</Text>
+                </TouchableOpacity>
+              )}
               
               <TouchableOpacity style={styles.menuItem} onPress={() => { onPin(); onClose(); }}>
                 <Pin size={20} color="#333" />
@@ -104,5 +150,25 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: '#FF3B30',
+  },
+  reactionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+  },
+  reactionButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reactionEmojiText: {
+    fontSize: 22,
+  },
+  plusEmojiText: {
+    fontSize: 20,
+    color: '#666',
+    fontWeight: 'bold',
   },
 });

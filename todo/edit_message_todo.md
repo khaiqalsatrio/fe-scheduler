@@ -1,0 +1,22 @@
+# Daftar Tugas: Edit Pesan
+
+- [x] Persiapan UI di `app/chat/[id].tsx`:
+    - [x] Tambahkan opsi "Edit" di `MessageActionMenu`.
+    - [x] Buat state `editingMessage` untuk mengelola pesan yang sedang diedit.
+- [x] Modifikasi `ChatInput.tsx`:
+    - [x] Tambahkan properti `editingMessage` dan `onCancelEdit`.
+    - [x] UI untuk menampilkan status edit di atas kolom input.
+- [x] Implementasi Logika update:
+    - [x] Buat fungsi `handleEdit` yang memanggil `PUT /v1/messages/{id}`.
+    - [x] Implementasi pemberitahuan sukses dan pembersihan state edit.
+- [x] Sinkronisasi Real-time:
+    - [x] Tambahkan socket listener untuk event `message.updated`.
+    - [x] Perbarui state `messages` berdasarkan data baru dari socket.
+- [x] Styling Bubble:
+    - [x] Tambahkan penanda "(diedit)" pada `MessageBubble`.
+- [x] Batasan Waktu (WhatsApp Style):
+    - [x] Implementasi pengecekan durasi 15 menit sebelum menampilkan menu Edit.
+- [x] Pengujian:
+    - [x] Edit pesan teks sendiri dan pastikan berubah di semua perangkat.
+    - [x] Batal edit dan pastikan input kembali normal.
+    - [x] Pastikan menu Edit hilang setelah 15 menit.

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { Paperclip, Camera, Mic, Send, X, Check, Square } from 'lucide-react-native';
+import { Paperclip, Mic, Send, X, Check, Square } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
@@ -51,7 +51,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         recording.stopAndUnloadAsync().catch(() => {});
       }
     };
-  }, [recording]);
+  }, []); // Hapus dependensi [recording] agar tidak mengganggu proses rekam
 
   const handleAction = () => {
     if (text.trim()) {
@@ -66,7 +66,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const startRecording = async () => {
     try {
-      // Bersihkan jika ada instance yang menggantung
       if (recording) {
         await recording.stopAndUnloadAsync();
         setRecording(null);
@@ -84,16 +83,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       });
 
       const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        (status) => {
+          if (status.canRecord) {
+            setRecordingDuration(Math.floor(status.durationMillis / 1000));
+          }
+        },
+        1000 // Update tiap detik
       );
       
       setRecording(newRecording);
       setIsRecording(true);
       setRecordingDuration(0);
-      
-      timerRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
       
       console.log('Recording started');
     } catch (err) {
@@ -118,8 +119,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         // Buat objek file buatan untuk onFileSend
         const fileAsset = {
           uri: uri,
-          name: `VN-${Date.now()}.m4a`,
-          mimeType: 'audio/m4a',
+          name: `VN-${Date.now()}.mp3`,
+          mimeType: 'audio/mpeg',
         };
         onFileSend(fileAsset, 'voice');
       }
@@ -166,24 +167,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const image = result.assets[0];
-        if (onFileSend) {
-          onFileSend(image, 'image');
-        }
-      }
-    } catch (err) {
-      console.warn('Error picking image:', err);
-    }
-  };
 
   return (
     <KeyboardAvoidingView
@@ -240,9 +224,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 />
                 <TouchableOpacity style={styles.iconButton} onPress={pickDocument}>
                   <Paperclip color="#666" size={22} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton} onPress={pickImage}>
-                  <Camera color="#666" size={22} />
                 </TouchableOpacity>
               </>
             )}
