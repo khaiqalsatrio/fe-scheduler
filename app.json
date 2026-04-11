@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "bolt-scheduler",
-    "slug": "bolt-scheduler",
+    "name": "ChatAja!",
+    "slug": "chataja",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.jpg",
@@ -39,7 +39,8 @@
           "speechRecognitionPermission": "Aplikasi memerlukan pengenalan suara untuk mengubah ucapan menjadi teks."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

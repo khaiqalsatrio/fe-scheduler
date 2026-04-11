@@ -1,3 +1,21 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
-}
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.import.exclusions": [
+        "**/node_modules/**",
+        "**/.git/**"
+    ],
+    "gradle.import.exclusions": [
+        "**/node_modules/**"
+    ],
+    "files.exclude": {
+        "**/.settings": true,
+        "**/.project": true,
+        "**/.classpath": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/.expo": true
+    }
+}

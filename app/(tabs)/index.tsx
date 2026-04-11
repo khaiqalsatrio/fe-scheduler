@@ -1,445 +1,481 @@
-import { View, Text, StyleSheet, SafeAreaView, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Calendar,
-  MapPin,
-  Users,
-  Clock,
-  ArrowRight,
-  MessageSquare,
-  Navigation,
-  HelpCircle,
-  Bell
-} from 'lucide-react-native';
-import { sessions } from '../../data/sessions';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+// import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 
-const { width } = Dimensions.get('window');
+const ONBOARDING_DATA = [
+  {
+    id: '1',
+    emoji: '👋',
+    title: '#Kenalin Tera',
+    subtitle: 'AI partner kamu di ITD Summit',
+    desc: 'Bantu ubah diskusi jadi insight dan dokumen siap pakai',
+  },
+  {
+    id: '2',
+    emoji: '💰',
+    title: '#Dari panjang jadi kepake',
+    subtitle: 'Insight dalam hitungan detik',
+    desc: 'Ringkas sesi dan ambil poin penting tanpa baca ulang',
+  },
+  {
+    id: '3',
+    emoji: '🎯',
+    title: '#Fokus pada substansi',
+    subtitle: 'Biar Tera yang mencatat',
+    desc: 'Jangan terlewat detail penting saat rapat',
+  },
+  {
+    id: '4',
+    emoji: '🚀',
+    title: '#Lebih produktif',
+    subtitle: 'Aksi nyata setelah diskusi',
+    desc: 'Dapatkan action items secara otomatis',
+  }
+];
 
-export default function HomeScreen() {
+export default function OnboardingScreen() {
   const router = useRouter();
 
-  // Get the first session as "Next Session" for demo
-  const nextSession = sessions[0];
+  // States for Login
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  // Get all unique speakers for "Featured Speakers"
-  const featuredSpeakers = sessions.flatMap(s => s.speakers).slice(0, 6);
+  // States for Slider
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const { width } = useWindowDimensions();
+  const slideWidth = width - 40; // Subtract paddingHorizontal of the container
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      let nextIndex = currentIndex + 1;
+      if (nextIndex >= ONBOARDING_DATA.length) {
+        nextIndex = 0;
+      }
+      scrollViewRef.current?.scrollTo({ x: nextIndex * slideWidth, animated: true });
+    }, 2500);
+
+    return () => clearInterval(timer);
+  }, [currentIndex, slideWidth]);
+
+  useEffect(() => {
+    // GOOGLE SIGN IN DISABLED
+    /*
+    GoogleSignin.configure({
+      webClientId: 'MASUKKAN_WEB_CLIENT_ID_ANDA_DISINI.apps.googleusercontent.com',
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+    });
+    */
+  }, []);
+
+  const navigateToHome = () => {
+    router.replace('/(tabs)/chats');
+  };
+
+  // --- Fungsi Login Biasa ---
+  const loginApp = async () => {
+    if (!email || !password) {
+      Alert.alert('Gagal', 'Silakan isi email dan password terlebih dahulu');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          username: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const token = data.token || data.access_token || data?.data?.token;
+
+        if (token) {
+          await SecureStore.setItemAsync('user_token', token);
+          console.log("Login sukses dan token tersimpan!");
+          navigateToHome();
+        } else {
+          Alert.alert('Sukses Login', 'Namun tidak mendapatkan token dari API');
+        }
+      } else {
+        Alert.alert('Login Gagal', data.message || 'Harap periksa kembali kredensial Anda.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Gagal menyambung ke server.');
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- Fungsi Login Menggunakan Google ---
+  const loginWithGoogle = async () => {
+    Alert.alert('Informasi', 'Fitur Login dengan Google saat ini belum tersedia.');
+    /*
+    setIsGoogleLoading(true);
+    try {
+      console.log('Memulai proses Google Sign-In...');
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const googleTokenObj = await GoogleSignin.getTokens();
+
+      const googleIdToken = googleTokenObj.idToken;
+
+      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/oauth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          access_token: googleIdToken
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Mendapatkan token dari berbagai kemungkinan field (data.token atau data.access_token atau data.data.token)
+        const backendToken = data.token || data.access_token || (data.data && data.data.token);
+        
+        if (backendToken) {
+          await SecureStore.setItemAsync('user_token', backendToken);
+          console.log("Login Google sukses! Token tersimpan.");
+          navigateToHome();
+        } else {
+          Alert.alert('Gagal Validasi', 'Server tidak membalas dengan token login yang valid.');
+        }
+      } else {
+        Alert.alert('Gagal Login dengan Google', data.message || 'Verifikasi gagal di server.');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('User menekan cancel pada dialog google sign-in');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        Alert.alert('Info', 'Proses Login Google sedang berlangsung');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services tidak tersedia di perangkat ini.');
+      } else {
+        Alert.alert('Error', 'Gagal menghubungkan dengan Google.');
+        console.error('Google Sign In Error:', error);
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+    */
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / slideWidth);
+    if (currentIndex !== index) {
+      setCurrentIndex(index);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Header / Hero Section */}
-        <LinearGradient
-          colors={['#00BCD4', '#0097A7']}
-          style={styles.hero}
-        >
-          <View style={styles.topHeader}>
-            <View>
-              <Text style={styles.welcomeText}>Halo, Selamat Siang!</Text>
-              <Text style={styles.heroTitle}>AI Insights 2026</Text>
-            </View>
-            <TouchableOpacity style={styles.notificationBtn}>
-              <Bell size={24} color="#FFF" />
-              <View style={styles.notifBadge} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.countdownContainer}>
-            <View style={styles.countdownItem}>
-              <Text style={styles.countdownValue}>02</Text>
-              <Text style={styles.countdownLabel}>Hari</Text>
-            </View>
-            <Text style={styles.countdownDivider}>:</Text>
-            <View style={styles.countdownItem}>
-              <Text style={styles.countdownValue}>14</Text>
-              <Text style={styles.countdownLabel}>Jam</Text>
-            </View>
-            <Text style={styles.countdownDivider}>:</Text>
-            <View style={styles.countdownItem}>
-              <Text style={styles.countdownValue}>45</Text>
-              <Text style={styles.countdownLabel}>Menit</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        <View style={styles.dashboardContent}>
-          {/* Quick Actions Grid */}
-          <View style={styles.quickActionsGrid}>
-            <TouchableOpacity style={styles.actionItem} onPress={() => router.push('/agenda')}>
-              <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                <Calendar size={24} color="#2196F3" />
-              </View>
-              <Text style={styles.actionLabel}>Agenda</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionItem} onPress={() => router.push('/networking')}>
-              <View style={[styles.actionIcon, { backgroundColor: '#F3E5F5' }]}>
-                <Users size={24} color="#9C27B0" />
-              </View>
-              <Text style={styles.actionLabel}>Networking</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionItem} onPress={() => router.push('/chats')}>
-              <View style={[styles.actionIcon, { backgroundColor: '#E0F2F1' }]}>
-                <MessageSquare size={24} color="#009688" />
-              </View>
-              <Text style={styles.actionLabel}>Obrolan</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionItem}>
-              <View style={[styles.actionIcon, { backgroundColor: '#FFF3E0' }]}>
-                <Navigation size={24} color="#FF9800" />
-              </View>
-              <Text style={styles.actionLabel}>Peta</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Next Session Widget */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Sesi Berikutnya</Text>
-            <TouchableOpacity onPress={() => router.push('/agenda')}>
-              <Text style={styles.seeAllText}>Lihat Semua</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={styles.nextSessionCard}
-            onPress={() => router.push({ pathname: '/agenda', params: { sessionId: nextSession.id } })}
-          >
-            <LinearGradient
-              colors={['#FFF', '#F8F9FA']}
-              style={styles.nextSessionContent}
-            >
-              <View style={styles.sessionTimeTag}>
-                <Clock size={14} color="#00BCD4" />
-                <Text style={styles.sessionTimeText}>{nextSession.startTime} - {nextSession.endTime}</Text>
-              </View>
-              <Text style={styles.sessionTitleText}>{nextSession.title}</Text>
-              <View style={styles.sessionFooter}>
-                <View style={[styles.trackBadge, { backgroundColor: '#00BCD420' }]}>
-                  <Text style={[styles.trackBadgeText, { color: '#00BCD4' }]}>{nextSession.track}</Text>
-                </View>
-                <ArrowRight size={20} color="#00BCD4" />
-              </View>
-            </LinearGradient>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Top Left Button */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.exploreBtn} activeOpacity={0.7} onPress={navigateToHome}>
+            <Text style={styles.exploreBtnText}>Jelajahi Fitur</Text>
           </TouchableOpacity>
+        </View>
 
-          {/* Featured Speakers */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pembicara Unggulan</Text>
+        {/* Content Centered */}
+        <View style={styles.content}>
+          <View style={{ width: '100%' }}>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={{ paddingTop: 10 }}
+            >
+              {ONBOARDING_DATA.map((item) => (
+                <View key={item.id} style={{ width: slideWidth, alignItems: 'center' }}>
+                  <View style={styles.illustrationContainer}>
+                    <Text style={styles.illustrationEmoji}>{item.emoji}</Text>
+                  </View>
+
+                  <View style={styles.textContainer}>
+                    <Text style={styles.titleText}>{item.title}</Text>
+                    <Text style={styles.subtitleText}>{item.subtitle}</Text>
+                    <Text style={styles.descText}>{item.desc}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.speakersScroll}
-          >
-            {featuredSpeakers.map((speaker, index) => (
-              <TouchableOpacity key={`${speaker.id}-${index}`} style={styles.speakerCard}>
-                <Image source={{ uri: speaker.avatar }} style={styles.speakerImage} />
-                <Text style={styles.speakerName} numberOfLines={1}>{speaker.name}</Text>
-                <Text style={styles.speakerCompany} numberOfLines={1}>{speaker.company}</Text>
-              </TouchableOpacity>
+
+          {/* Progress Indicator */}
+          <View style={styles.progressContainer}>
+            {ONBOARDING_DATA.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.progressDot,
+                  currentIndex === index && styles.progressDotActive
+                ]}
+              />
             ))}
-          </ScrollView>
-
-          {/* Announcements */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pengumuman</Text>
-          </View>
-          <View style={styles.announcementCard}>
-            <View style={styles.announcementIcon}>
-              <Bell size={20} color="#00BCD4" />
-            </View>
-            <View style={styles.announcementTextContainer}>
-              <Text style={styles.announcementTitle}>Registrasi Ulang Dibuka</Text>
-              <Text style={styles.announcementDate}>10 Menit yang lalu</Text>
-              <Text style={styles.announcementDesc}>Silakan kunjungi loket utama untuk pengambilan name tag dan souvenir.</Text>
-            </View>
           </View>
 
-          {/* Sponsors Section */}
-          <View style={styles.sponsorsSection}>
-            <Text style={styles.sponsorsTitle}>Disponsori Oleh</Text>
-            <View style={styles.sponsorsGrid}>
-              <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/2560px-Google_2015_logo.svg.png' }} style={styles.sponsorLogo} resizeMode="contain" />
-              <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/2048px-Microsoft_logo.svg.png' }} style={styles.sponsorLogo} resizeMode="contain" />
-              <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/IBM_logo.svg/2560px-IBM_logo.svg.png' }} style={styles.sponsorLogo} resizeMode="contain" />
+          {/* Inputs & Buttons */}
+          <View style={styles.formContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <TouchableOpacity
+              style={[styles.nextButton, isLoading && styles.buttonDisabled]}
+              activeOpacity={0.8}
+              onPress={loginApp}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.nextButtonText}>Login</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
             </View>
+
+            <TouchableOpacity
+              style={[styles.googleButton, isGoogleLoading && styles.buttonDisabled]}
+              activeOpacity={0.7}
+              onPress={loginWithGoogle}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <>
+                  <Image
+                    source={{ uri: 'https://img.icons8.com/color/48/000000/google-logo.png' }}
+                    style={styles.googleIcon}
+                  />
+                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Image
+            source={require('../../assets/images/logo.jpg')}
+            style={styles.logoImage}
+          />
+          <Text style={styles.versionText}>v1.4.1</Text>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FAFAFD', // Light greyish background as in image
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 20,
+  },
+  header: {
+    paddingVertical: 15,
+  },
+  exploreBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F0F2F5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+  },
+  exploreBtnText: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
-  },
-  hero: {
-    paddingTop: 40,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
-  },
-  topHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 30,
+    justifyContent: 'flex-end',
+    marginBottom: 20,
+    marginTop: -80, // slightly adjust vertical center as before but with space
   },
-  welcomeText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFF',
-    marginTop: 4,
-  },
-  notificationBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  illustrationContainer: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  notifBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 12,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#FF5252',
-    borderWidth: 2,
-    borderColor: '#00BCD4',
-  },
-  countdownContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingVertical: 15,
-    borderRadius: 20,
-  },
-  countdownItem: {
-    alignItems: 'center',
-    width: 60,
-  },
-  countdownValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  countdownLabel: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textTransform: 'uppercase',
-    marginTop: 2,
-  },
-  countdownDivider: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFF',
-    marginBottom: 15,
-  },
-  dashboardContent: {
-    padding: 20,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-    marginTop: -40,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  actionItem: {
-    alignItems: 'center',
-  },
-  actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#444',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1A1A1A',
-  },
-  seeAllText: {
-    color: '#00BCD4',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  nextSessionCard: {
-    marginBottom: 30,
-    borderRadius: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    overflow: 'hidden',
-  },
-  nextSessionContent: {
-    padding: 20,
-  },
-  sessionTimeTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E0F7FA',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    marginBottom: 12,
-    gap: 6,
-  },
-  sessionTimeText: {
-    fontSize: 12,
-    color: '#00BCD4',
-    fontWeight: '700',
-  },
-  sessionTitleText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 15,
-    lineHeight: 24,
-  },
-  sessionFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  trackBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  trackBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  speakersScroll: {
-    paddingRight: 20,
-    marginBottom: 30,
-  },
-  speakerCard: {
-    width: 100,
-    marginRight: 15,
-    alignItems: 'center',
-  },
-  speakerImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginBottom: 8,
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  speakerName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    textAlign: 'center',
-  },
-  speakerCompany: {
-    fontSize: 10,
-    color: '#666',
-    textAlign: 'center',
-  },
-  announcementCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    padding: 16,
-    borderRadius: 20,
     marginBottom: 30,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 10,
   },
-  announcementIcon: {
+  illustrationEmoji: {
+    fontSize: 80,
+  },
+  textContainer: {
+    width: '100%',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  titleText: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#111',
+    marginBottom: 4,
+  },
+  subtitleText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F9D58', // Green color
+    marginBottom: 10,
+  },
+  descText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 10,
+  },
+  progressDot: {
+    flex: 1,
+    height: 3,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+  },
+  progressDotActive: {
+    backgroundColor: '#0F9D58',
+  },
+  formContainer: {
+    width: '100%',
+  },
+  input: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 10,
+  },
+  nextButton: {
+    backgroundColor: '#74C69D', // Light green matches image
+    borderRadius: 24,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  nextButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#EAEAEA',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#999',
+    fontSize: 14,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+    borderRadius: 24,
+    paddingVertical: 14,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
+  },
+  googleButtonText: {
+    color: '#333',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  logoImage: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E0F7FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    marginBottom: 8,
   },
-  announcementTextContainer: {
-    flex: 1,
-  },
-  announcementTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  announcementDate: {
-    fontSize: 11,
+  versionText: {
+    fontSize: 12,
     color: '#999',
-    marginVertical: 4,
-  },
-  announcementDesc: {
-    fontSize: 13,
-    color: '#666',
-    lineHeight: 18,
-  },
-  sponsorsSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  sponsorsTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#999',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 20,
-  },
-  sponsorsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 30,
-    opacity: 0.6,
-  },
-  sponsorLogo: {
-    width: 80,
-    height: 40,
+    fontWeight: '500',
   },
 });
