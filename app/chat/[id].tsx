@@ -21,6 +21,7 @@ interface Message {
     name: string;
     text: string;
   };
+  status?: 'sent' | 'delivered' | 'read';
   file?: {
     url: string;
     name: string;
@@ -80,13 +81,19 @@ export default function ChatDetailScreen() {
       });
 
       newSocket.on('message.new', (msg: any) => {
+        // Segera kirim sinyal delivered jika pesan dari orang lain
+        if (msg.sender_id !== myIdRef.current) {
+          newSocket.emit('message.delivered', { messageId: msg.id });
+          newSocket.emit('message.read', { conversationId: id, lastMessageId: msg.id });
+        }
+
         // Terjemahkan message data ke Frontend format
         const newMessage: Message = {
           id: msg.client_message_id || msg.id,
           text: msg.content || '',
           time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          // Tentukan isMine dengan membandingkan sender_id dengan ref myId kita
           isMine: msg.sender_id === myIdRef.current || msg.is_mine === true,
+          status: msg.status || 'sent',
           file: msg.meta?.file ? {
             url: msg.meta.file.url,
             name: msg.meta.file.name || 'file',
@@ -101,6 +108,24 @@ export default function ChatDetailScreen() {
         });
 
         setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
+      });
+
+      newSocket.on('message.delivered', (data: any) => {
+        setMessages(prev => prev.map(m => 
+          m.id === data.messageId ? { ...m, status: 'delivered' } : m
+        ));
+      });
+
+      newSocket.on('message.read', (data: any) => {
+        // Jika lastMessageId tersedia, tandai semua pesan sebelumnya sebagai read
+        setMessages(prev => prev.map(m => {
+           // Sederhananya, jika pengirimnya bukan saya, dan statusnya belum read, perbarui
+           // Namun biasanya kita hanya peduli centang biru untuk pesan KITA sendiri
+           if (m.isMine && m.status !== 'read') {
+             return { ...m, status: 'read' };
+           }
+           return m;
+        }));
       });
 
       newSocket.on('error', (err) => console.error('Socket error event:', err));
@@ -152,6 +177,7 @@ export default function ChatDetailScreen() {
               text: m.content || m.text || '',
               time: m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               isMine: userId ? m.sender_id === userId : (m.is_mine === true),
+              status: m.status || (m.read_at ? 'read' : 'sent'),
               file: m.meta?.file ? {
                 url: m.meta.file.url,
                 name: m.meta.file.name || 'file',
@@ -239,7 +265,7 @@ export default function ChatDetailScreen() {
     // UI Optimistik
     const newMessage: Message = {
       id: clientId,
-      text: type === 'image' ? '📷 Gambar' : `📄 ${fileAsset.name || 'File'}`,
+      text: type === 'image' ? '📷 Gambar' : type === 'voice' ? '🎤 Pesan Suara' : `📄 ${fileAsset.name || 'File'}`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isMine: true,
       file: {
@@ -352,12 +378,6 @@ export default function ChatDetailScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Video color="#666" size={22} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Phone color="#666" size={22} />
-          </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
             <MoreVertical color="#666" size={22} />
           </TouchableOpacity>

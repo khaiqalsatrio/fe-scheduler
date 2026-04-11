@@ -1,6 +1,7 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
-import { Pin, CheckCheck, FileText } from 'lucide-react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { Pin, Check, CheckCheck, FileText, Play, Pause, Mic } from 'lucide-react-native';
+import { Audio } from 'expo-av';
 
 interface MessageBubbleProps {
   message: string;
@@ -9,6 +10,7 @@ interface MessageBubbleProps {
   onLongPress?: () => void;
   isPinned?: boolean;
   isEdited?: boolean;
+  status?: 'sent' | 'delivered' | 'read';
   replyTo?: {
     name: string;
     text: string;
@@ -27,16 +29,82 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onLongPress,
   isPinned,
   isEdited,
+  status = 'sent',
   replyTo,
   file
 }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+
   const isImage = file?.type?.startsWith('image/') || 
                   file?.url?.toLowerCase().endsWith('.jpg') || 
                   file?.url?.toLowerCase().endsWith('.png') ||
                   file?.url?.toLowerCase().endsWith('.jpeg');
 
+  const isVoice = file?.type?.startsWith('audio/') || 
+                  file?.type === 'voice' ||
+                  file?.url?.toLowerCase().endsWith('.m4a') ||
+                  file?.url?.toLowerCase().endsWith('.mp3');
+
   // Jika pesan hanya berisi label placeholder "📷 Gambar", kita anggap tidak ada teks (ala WA)
   const isOnlyImage = isImage && (message === '📷 Gambar' || !message.trim());
+  const isOnlyVoice = isVoice && (message === '🎤 Pesan Suara' || !message.trim());
+
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
+  const onPlaybackStatusUpdate = (status: any) => {
+    if (status.isLoaded) {
+      setPosition(status.positionMillis);
+      setDuration(status.durationMillis || 0);
+      setIsPlaying(status.isPlaying);
+      if (status.didJustFinish) {
+        setIsPlaying(false);
+        setPosition(0);
+        sound?.setPositionAsync(0);
+      }
+    }
+  };
+
+  const handlePlayPause = async () => {
+    if (sound) {
+      if (isPlaying) {
+        await sound.pauseAsync();
+      } else {
+        await sound.playAsync();
+      }
+    } else if (file?.url) {
+      try {
+        setIsLoadingAudio(true);
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: file.url },
+          { shouldPlay: true },
+          onPlaybackStatusUpdate
+        );
+        setSound(newSound);
+      } catch (error) {
+        console.error('Error loading sound', error);
+      } finally {
+        setIsLoadingAudio(false);
+      }
+    }
+  };
+
+  const formatTime = (millis: number) => {
+    const totalSeconds = millis / 1000;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
   return (
     <View style={[styles.outerContainer, isMine ? styles.myOuterContainer : styles.theirOuterContainer]}>
       <TouchableOpacity 
@@ -74,7 +142,38 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             />
           )}
 
-          {file && !isImage && (
+          {file && isVoice && (
+            <View style={styles.voiceContainer}>
+              <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
+                {isLoadingAudio ? (
+                  <ActivityIndicator size="small" color={isMine ? "#00BCD4" : "#25D366"} />
+                ) : isPlaying ? (
+                  <Pause color={isMine ? "#00BCD4" : "#25D366"} size={28} fill={isMine ? "#00BCD4" : "#25D366"} />
+                ) : (
+                  <Play color={isMine ? "#00BCD4" : "#25D366"} size={28} fill={isMine ? "#00BCD4" : "#25D366"} />
+                )}
+              </TouchableOpacity>
+              
+              <View style={styles.voiceWaveformContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View 
+                    style={[
+                      styles.progressBarFill, 
+                      { width: duration > 0 ? `${(position / duration) * 100}%` : '0%' }
+                    ]} 
+                  />
+                </View>
+                <View style={styles.voiceFooter}>
+                  <Text style={styles.voiceDuration}>
+                    {isPlaying || position > 0 ? formatTime(position) : formatTime(duration)}
+                  </Text>
+                  <Mic size={12} color="#999" />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {file && !isImage && !isVoice && (
             <View style={styles.fileContainer}>
               <View style={styles.fileIconWrapper}>
                 <FileText color="#FFF" size={24} />
@@ -86,7 +185,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             </View>
           )}
           
-          {!isOnlyImage && (
+          {!isOnlyImage && !isOnlyVoice && (
             <Text style={[styles.message, isMine ? styles.myMessage : styles.theirMessage]}>
               {message}
             </Text>
@@ -96,7 +195,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {isEdited && <Text style={styles.editedLabel}>(diedit)</Text>}
             {isPinned && <Pin size={10} color="#666" style={styles.pinIcon} />}
             <Text style={[styles.time, isMine ? styles.myTime : styles.theirTime]}>{time}</Text>
-            {isMine && <CheckCheck size={14} color="#34B7F1" style={styles.checkIcon} />}
+            {isMine && (
+              status === 'sent' ? (
+                <Check size={14} color="#999" style={styles.checkIcon} />
+              ) : (
+                <CheckCheck size={14} color={status === 'read' ? "#34B7F1" : "#999"} style={styles.checkIcon} />
+              )
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -241,5 +346,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  voiceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 8,
+    marginBottom: 6,
+    minWidth: 200,
+  },
+  playButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  voiceWaveformContainer: {
+    flex: 1,
+  },
+  progressBarBackground: {
+    height: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 1.5,
+    width: '100%',
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#00BCD4',
+    borderRadius: 1.5,
+  },
+  voiceFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voiceDuration: {
+    fontSize: 11,
+    color: '#666',
   },
 });
