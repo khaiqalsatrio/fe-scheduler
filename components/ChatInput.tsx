@@ -256,7 +256,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 const styles = StyleSheet.create({
   mainContainer: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#F0F2F5', // Light grey background like in reference image
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E0E0E0',
   },
   topBarContainer: {
     flexDirection: 'row',
@@ -300,8 +302,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'android' ? 24 : 10, // Extra padding for tall Android screens
     backgroundColor: 'transparent',
   },
   inputWrapper: {
@@ -309,15 +312,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    borderRadius: 24,
-    paddingHorizontal: 5,
+    borderRadius: 26,
+    paddingRight: 6,
     marginRight: 8,
-    minHeight: 48,
-    elevation: 1,
+    minHeight: 52,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 1,
+    shadowRadius: 2,
   },
   input: {
     flex: 1,
@@ -329,17 +332,17 @@ const styles = StyleSheet.create({
     maxHeight: 120,
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#25D366',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 1,
+    shadowRadius: 2,
   },
   iconButton: {
     padding: 8,

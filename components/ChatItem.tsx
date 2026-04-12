@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
-import { User, Users } from 'lucide-react-native';
+import { User, Users, Check } from 'lucide-react-native';
 
 interface ChatItemProps {
   name: string;
@@ -11,6 +11,8 @@ interface ChatItemProps {
   isOnline?: boolean;
   unreadCount?: number;
   onPress?: () => void;
+  onLongPress?: () => void;
+  isSelected?: boolean;
 }
 
 export const ChatItem: React.FC<ChatItemProps> = ({
@@ -22,9 +24,16 @@ export const ChatItem: React.FC<ChatItemProps> = ({
   isOnline,
   unreadCount,
   onPress,
+  onLongPress,
+  isSelected,
 }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={[styles.container, isSelected && styles.selectedContainer]} 
+      onPress={onPress} 
+      onLongPress={onLongPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.avatarContainer}>
         {avatar ? (
           <Image source={{ uri: avatar }} style={styles.avatar} />
@@ -38,6 +47,11 @@ export const ChatItem: React.FC<ChatItemProps> = ({
           </View>
         )}
         {isOnline && <View style={styles.onlineBadge} />}
+        {isSelected && (
+          <View style={styles.selectionOverlay}>
+            <Check color="#FFF" size={16} />
+          </View>
+        )}
       </View>
       <View style={styles.content}>
         <View style={styles.header}>
@@ -141,5 +155,20 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 11,
     fontWeight: '700',
+  },
+  selectedContainer: {
+    backgroundColor: '#E7F5FE', // Light blue tint like WA selection
+  },
+  selectionOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#25D366', // WA green
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.8,
   },
 });

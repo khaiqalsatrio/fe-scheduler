@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator, TextInput } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator, TextInput, ImageBackground } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pin, X, ChevronLeft, User, Video, Phone, MoreVertical, Lock, Sparkles, MessageCircle, FileText, Presentation, Search } from 'lucide-react-native';
+import { Pin, X, ChevronLeft, User, Users, Video, Phone, MoreVertical, Lock, Sparkles, MessageCircle, FileText, Presentation, Search } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { io, Socket } from 'socket.io-client';
 import { Buffer } from 'buffer';
@@ -35,6 +35,7 @@ interface Message {
   };
   created_at: string;
   isDeleted?: boolean;
+  senderName?: string;
 }
 
 interface DateSeparator {
@@ -80,6 +81,31 @@ export default function ChatDetailScreen() {
 
   // Pin States
   const [activePinnedIndex, setActivePinnedIndex] = useState(0);
+
+  // AI & Member States
+  const [chatType, setChatType] = useState<'dm' | 'group'>('dm');
+  const [memberCount, setMemberCount] = useState(0);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+
+  // Pulse Animation for AI Button
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   // 1. Helpers
   const getChatDateLabel = (dateStr: string) => {
@@ -202,6 +228,15 @@ export default function ChatDetailScreen() {
           } : undefined,
           created_at: msg.created_at || new Date().toISOString(),
           reactions: msg.reactions || [],
+          senderName: msg.sender_id === '00000000-0000-0000-0000-000000000000' 
+            ? 'Tera AI' 
+            : (msg.sender?.name || msg.sender_name),
+          replyTo: msg.reply_to_message ? {
+            text: msg.reply_to_message.content,
+            name: msg.reply_to_message.sender_id === myIdRef.current 
+              ? 'Anda' 
+              : (msg.reply_to_message.sender_name || (name as string) || 'User')
+          } : undefined,
         };
 
         setMessages(prev => {
@@ -285,6 +320,19 @@ export default function ChatDetailScreen() {
         ));
       });
 
+      newSocket.on('ai.thinking', (data: any) => {
+        if (data.conversationId === id) {
+          setIsAiThinking(true);
+          setTimeout(() => flatListRef.current?.scrollToEnd(), 200);
+        }
+      });
+
+      newSocket.on('ai.thinking.stop', (data: any) => {
+        if (data.conversationId === id) {
+          setIsAiThinking(false);
+        }
+      });
+
       newSocket.on('error', (err) => console.error('Socket error event:', err));
     };
 
@@ -360,18 +408,24 @@ export default function ChatDetailScreen() {
              setHasMore(false);
            }
 
-           const formattedMessages = data.map((m: any) => ({ created_at: m.created_at || new Date().toISOString(),
+           const formattedMessages = data.map((m: any) => ({ 
+             created_at: m.created_at || new Date().toISOString(),
              id: m.id?.toString() || m.client_message_id || Math.random().toString(),
              text: m.content || m.text || '',
              time: m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) : new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }),
              isMine: userId ? m.sender_id === userId : (m.is_mine === true),
              isPinned: m.is_pinned || false,
-             status: m.status || (m.read_at ? 'read' : 'sent'), isEdited: !!m.edited_at, isDeleted: !!m.deleted_at,
+             status: m.status || (m.read_at ? 'read' : 'sent'), 
+             isEdited: !!m.edited_at, 
+             isDeleted: !!m.deleted_at,
              reactions: m.reactions || [],
+             senderName: m.sender_id === '00000000-0000-0000-0000-000000000000' 
+               ? 'Tera AI' 
+               : (m.sender?.name || m.sender_name),
              replyTo: m.reply_to_message ? {
                 id: m.reply_to_message.id,
                 text: m.reply_to_message.content,
-                name: m.reply_to_message.sender_name || 'User'
+                name: m.reply_to_message.sender_id === userId ? 'Anda' : (m.reply_to_message.sender_name || (name as string) || 'User')
              } : undefined,
              file: m.meta?.file ? {
                url: m.meta.file.url,
@@ -387,9 +441,28 @@ export default function ChatDetailScreen() {
              setIsInitialLoad(true);
            }
 
-           if (data.length > 0) {
-             setOldestCursor(data[data.length - 1].created_at);
-           }
+            if (data.length > 0) {
+              setOldestCursor(data[data.length - 1].created_at);
+            }
+
+            // Ambil Info Percakapan (Type & Member Count)
+            if (jsonResp.conversation) {
+              setChatType(jsonResp.conversation.type);
+              
+              if (jsonResp.conversation.type === 'group') {
+                try {
+                  const memberResp = await fetch(`https://dev-ows-api.telkom-digital.id/v1/conversations/${id}/members`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  const memberData = await memberResp.json();
+                  if (memberResp.ok) {
+                    setMemberCount(Array.isArray(memberData) ? memberData.length : 0);
+                  }
+                } catch (err) {
+                  console.warn('Gagal ambil jumlah anggota grup:', err);
+                }
+              }
+            }
         }
       } else {
         console.log('Gagal ambil histori pesan:', jsonResp.message);
@@ -427,7 +500,7 @@ export default function ChatDetailScreen() {
       text,
       time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }),
       isMine: true,
-      replyTo: replyingTo ? { name: replyingTo.isMine ? 'Anda' : (name as string || 'Teman'), text: replyingTo.text } : undefined,
+      replyTo: replyingTo ? { name: replyingTo.isMine ? 'Anda' : (name as string || 'User'), text: replyingTo.text } : undefined,
       created_at: new Date().toISOString(),
     };
     
@@ -466,6 +539,73 @@ export default function ChatDetailScreen() {
     } catch (e) {
       console.error("Gagal mengirim:", e);
       Alert.alert('Error', 'Kesalahan jaringan saat mengirim pesan.');
+    }
+  };
+
+  const handleTeraAction = async (actionType: 'summarize' | 'presentation' | 'ask', customText?: string) => {
+    setIsAIActionsVisible(false);
+    let userPrompt = "";
+
+    if (actionType === 'summarize') {
+      userPrompt = "/summarize " + (customText || "Tolong ringkas poin-poin diskusi penting dalam percakapan ini.");
+    } else if (actionType === 'presentation') {
+      userPrompt = "/presentation " + (customText || "Buat draf slide presentasi dari chat ini.");
+    } else {
+      userPrompt = customText || "Tanya AI...";
+    }
+
+    // 1. Kirim pesan ke socket agar riwayat chat mencatat permintaan user
+    handleSend(userPrompt);
+
+    // 2. Aktifkan indikator thinking
+    setIsAiThinking(true);
+
+    try {
+      const token = await SecureStore.getItemAsync('user_token');
+      const apiUrl = `https://dev-ows-api.telkom-digital.id/v1/ai-insight/document/${id}`;
+      
+      console.log("Triggering AI Insight:", apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const resJson = await response.json();
+      setIsAiThinking(false);
+
+      if (response.ok) {
+        // Tampilkan jawaban riil dari server
+        const aiMsg: Message = {
+          id: 'ai-' + Date.now(),
+          text: resJson.content || resJson.insight || resJson.summary || "Analisis Berhasil (Data Kosong)",
+          time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          isMine: false,
+          senderName: 'Tera AI',
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, aiMsg]);
+      } else {
+        // Tampilkan alasan kegagalan dari server mentor Anda
+        const errorInfo = resJson.message || `Server Error ${response.status}`;
+        const fallbackMsg: Message = {
+          id: 'ai-fb-' + Date.now(),
+          text: `[Backend Feedback]: ${errorInfo}. ID Percakapan: ${id}`,
+          time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          isMine: false,
+          senderName: 'Tera AI',
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, fallbackMsg]);
+      }
+      setTimeout(() => flatListRef.current?.scrollToEnd(), 200);
+
+    } catch (e) {
+      console.error("Tera AI Network Error:", e);
+      setIsAiThinking(false);
     }
   };
 
@@ -764,7 +904,7 @@ export default function ChatDetailScreen() {
         {isSearchingInside ? (
           <View style={styles.searchHeaderInside}>
             <TouchableOpacity onPress={() => { setIsSearchingInside(false); setLocalSearchQuery(''); }} style={styles.backButton}>
-              <ChevronLeft color="#25D366" size={28} />
+              <ChevronLeft color="#555" size={24} />
             </TouchableOpacity>
             <TextInput
               autoFocus
@@ -781,33 +921,44 @@ export default function ChatDetailScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.headerLeft}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <ChevronLeft color="#25D366" size={28} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.userInfo} activeOpacity={0.7}>
-                <View style={styles.avatarPlaceholder}>
-                  <User color="#999" size={20} />
-                </View>
-                <View style={styles.nameContainer}>
-                  <Text style={styles.headerName} numberOfLines={1}>{name as string || 'Ahmad Zaki'}</Text>
-                  <Text style={styles.headerStatus}>Online</Text>
-                </View>
-              </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeft color="#22C55E" size={28} />
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <View style={[
+                styles.headerAvatar,
+                chatType === 'group' && { backgroundColor: '#E0EEFF' }
+              ]}>
+                {chatType === 'group' ? (
+                  <Users color="#3B82F6" size={22} />
+                ) : (
+                  <User color="#999" size={22} />
+                )}
+              </View>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle} numberOfLines={1}>{name as string || 'Sarah Nur'}</Text>
+                <Text style={styles.headerSubtitle}>
+                  {chatType === 'group' ? `${memberCount} Member` : 'Last seen recently'}
+                </Text>
+              </View>
             </View>
-            <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.iconButton} onPress={() => setIsSearchingInside(true)}>
-                <Search color="#666" size={22} />
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.headerButton} onPress={() => setIsSearchingInside(true)}>
+                <Search color="#555" size={22} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton}>
-                <MoreVertical color="#666" size={22} />
+              <TouchableOpacity style={styles.headerButton}>
+                <MoreVertical color="#555" size={22} />
               </TouchableOpacity>
             </View>
           </>
         )}
       </View>
 
-      <View style={styles.container}>
+      <ImageBackground 
+        source={require('../../assets/images/wallpaper.jpg')} 
+        style={styles.container}
+        resizeMode="repeat" // Changed to repeat for pattern style, or cover if preferred
+      >
         {pinnedMessages.length > 0 && (
           <View style={styles.pinnedMessagesBar}>
             <TouchableOpacity
@@ -917,6 +1068,8 @@ export default function ChatDetailScreen() {
                       reactions={item.reactions}
                       myUserId={myId}
                       onReactionPress={(emoji) => handleReact(emoji, item.id)}
+                      senderName={item.senderName}
+                      chatType={item.senderName === 'Tera AI' ? 'group' : chatType as any}
                     />
                   );
                 }}
@@ -960,7 +1113,10 @@ export default function ChatDetailScreen() {
           pointerEvents={isAIActionsVisible ? 'auto' : 'none'}
         >
           <View style={styles.aiMenuCard}>
-            <TouchableOpacity style={styles.aiMenuItem} onPress={() => setIsAIActionsVisible(false)}>
+            <TouchableOpacity 
+              style={styles.aiMenuItem} 
+              onPress={() => handleTeraAction('ask', 'Tanya AI: ')}
+            >
               <View style={[styles.aiIconWrapper, { backgroundColor: '#F3E8FF' }]}>
                 <MessageCircle color="#A855F7" size={22} />
               </View>
@@ -972,7 +1128,10 @@ export default function ChatDetailScreen() {
 
             <View style={styles.aiMenuDivider} />
 
-            <TouchableOpacity style={styles.aiMenuItem} onPress={() => setIsAIActionsVisible(false)}>
+            <TouchableOpacity 
+              style={styles.aiMenuItem} 
+              onPress={() => handleTeraAction('summarize')}
+            >
               <View style={[styles.aiIconWrapper, { backgroundColor: '#E0F2FE' }]}>
                 <FileText color="#0EA5E9" size={22} />
               </View>
@@ -984,7 +1143,10 @@ export default function ChatDetailScreen() {
 
             <View style={styles.aiMenuDivider} />
 
-            <TouchableOpacity style={styles.aiMenuItem} onPress={() => setIsAIActionsVisible(false)}>
+            <TouchableOpacity 
+              style={styles.aiMenuItem} 
+              onPress={() => handleTeraAction('presentation')}
+            >
               <View style={[styles.aiIconWrapper, { backgroundColor: '#DCFCE7' }]}>
                 <Presentation color="#22C55E" size={22} />
               </View>
@@ -996,25 +1158,65 @@ export default function ChatDetailScreen() {
           </View>
         </Animated.View>
 
-        {/* AI Sparkle Button */}
-        <TouchableOpacity
-          style={styles.sparkleButton}
-          activeOpacity={0.8}
-          onPress={toggleAIMenu}
-        >
-          <LinearGradient
-            colors={['#A855F7', '#6366F1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.sparkleGradient}
+        {/* AI Sparkle Button with Glow Effect */}
+        <View style={styles.sparkleButtonContainer}>
+          <Animated.View 
+            style={[
+              styles.sparkleGlow,
+              {
+                opacity: pulseAnim.interpolate({
+                  inputRange: [1, 1.1],
+                  outputRange: [0, 0.4]
+                }),
+                transform: [{ scale: pulseAnim.interpolate({
+                  inputRange: [1, 1.1],
+                  outputRange: [1, 1.1]
+                })}]
+              }
+            ]}
+          />
+          <Animated.View 
+            style={[
+              styles.sparkleButton, 
+            ]}
           >
-            <Sparkles color="#FFF" size={24} />
-          </LinearGradient>
-        </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={toggleAIMenu}
+              style={{ flex: 1 }}
+            >
+              <LinearGradient
+                colors={['#A855F7', '#6366F1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.sparkleGradient}
+              >
+                <Sparkles color="#FFF" fill="#FFF" size={24} style={{ position: 'absolute' }} />
+                <Animated.View style={{ opacity: pulseAnim.interpolate({ inputRange: [1, 1.1], outputRange: [0, 1] }) }}>
+                  <Sparkles color="#C3B1E1" fill="#C3B1E1" size={24} />
+                </Animated.View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+
+        {isAiThinking && (
+          <Animated.View 
+            style={styles.aiThinkingContainer}
+          >
+            <View style={styles.aiThinkingBubble}>
+              <Sparkles color="#A855F7" size={14} style={{ marginRight: 6 }} />
+              <Text style={styles.aiThinkingText}>AI sedang menyiapkan balasan...</Text>
+            </View>
+          </Animated.View>
+        )}
 
         {!isSearchingInside && (
           <ChatInput
-            replyingTo={replyingTo ? { name: replyingTo.isMine ? 'Anda' : (name as string || 'Teman'), text: replyingTo.text } : null}
+            replyingTo={replyingTo ? { 
+              name: replyingTo.isMine ? 'Anda' : (replyingTo.senderName || (name as string) || 'User'), 
+              text: replyingTo.text 
+            } : null}
             onCancelReply={() => setReplyingTo(null)}
             onSend={handleSend}
             isEditing={!!editingMessage}
@@ -1024,7 +1226,7 @@ export default function ChatDetailScreen() {
             onFileSend={handleFileSend}
           />
         )}
-      </View>
+      </ImageBackground>
 
       <MessageActionMenu
         visible={isMenuVisible}
@@ -1056,58 +1258,52 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 5,
-    height: 60,
-    backgroundColor: '#FFF',
+    paddingHorizontal: 10,
+    backgroundColor: '#FFFFFF',
+    height: 65,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEE',
+    borderBottomColor: '#E0E0E0',
   },
-  headerLeft: {
+  headerInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginLeft: 5,
   },
-  backButton: {
-    padding: 8,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatarPlaceholder: {
+  headerAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EAEAEA',
+    backgroundColor: '#E1E1E1',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
-  nameContainer: {
-    justifyContent: 'center',
+  headerTextContainer: {
+    flex: 1,
   },
-  headerName: {
-    fontSize: 16,
+  headerTitle: {
+    fontSize: 17,
     fontWeight: '700',
     color: '#000',
   },
-  headerStatus: {
+  headerSubtitle: {
     fontSize: 12,
     color: '#666',
   },
-  headerRight: {
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconButton: {
+  headerButton: {
     padding: 8,
-    marginLeft: 5,
+  },
+  backButton: {
+    padding: 4,
   },
   container: {
     flex: 1,
-    backgroundColor: '#EBE5DF',
+    backgroundColor: '#E5DDD5',
   },
   encryptedBannerWrapper: {
     alignItems: 'center',
@@ -1227,19 +1423,32 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
     paddingHorizontal: 15,
   },
-  sparkleButton: {
+  sparkleButtonContainer: {
     position: 'absolute',
-    bottom: 80, // right above chat input
+    bottom: 110,
     right: 15,
     width: 56,
     height: 56,
-    borderRadius: 28,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
     zIndex: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sparkleButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    elevation: 2,
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  sparkleGlow: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#A855F7',
   },
   sparkleGradient: {
     flex: 1,
@@ -1335,5 +1544,27 @@ const styles = StyleSheet.create({
   localSearchResultText: {
     fontSize: 14,
     color: '#333',
+  },
+  aiThinkingContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    alignItems: 'flex-start',
+  },
+  aiThinkingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: '#F3E8FF',
+  },
+  aiThinkingText: {
+    fontSize: 13,
+    color: '#6B21A8',
+    fontStyle: 'italic',
+    fontWeight: '500',
   },
 });

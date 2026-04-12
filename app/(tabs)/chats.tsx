@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextInput, Platform, StatusBar, Image, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextInput, Platform, StatusBar, Image, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MoreVertical, Search, MessageSquarePlus } from 'lucide-react-native';
+import { MoreVertical, Search, MessageSquarePlus, Trash2, ArrowLeft, X } from 'lucide-react-native';
 import { ChatItem } from '../../components/ChatItem';
 import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,6 +25,7 @@ export default function ChatsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -90,17 +91,19 @@ export default function ChatsScreen() {
         // API docs: jsonResp adalah Array langsung [...]
         const data = Array.isArray(jsonResp) ? jsonResp : (jsonResp.data || []);
 
-        const formattedData: ChatData[] = data.map((item: any) => ({
-          id: item.id.toString(),
-          // Untuk DM gunakan nama Penerima, untuk Grup gunakan Title
-          name: item.title || item.recipient?.name || "User",
-          lastMessage: item.last_message?.content || "",
-          time: item.last_message?.created_at ? new Date(item.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Baru saja",
-          unreadCount: parseInt(item.unread_count?.toString() || '0', 10),
-          isOnline: item.is_online || false,
-          avatar: item.photo_url || item.recipient?.avatar,
-          isGroup: item.type === 'group'
-        }));
+        const formattedData: ChatData[] = data
+          .map((item: any) => ({
+            id: item.id.toString(),
+            name: item.title || item.recipient?.name || "User",
+            lastMessage: item.last_message?.content || "",
+            time: item.last_message?.created_at ? new Date(item.last_message.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) : "Baru saja",
+            unreadCount: parseInt(item.unread_count?.toString() || '0', 10),
+            isOnline: item.is_online || false,
+            avatar: item.photo_url || item.recipient?.avatar,
+            isGroup: item.type === 'group'
+          }))
+          .filter((chat: ChatData) => chat.lastMessage !== "" || chat.unreadCount > 0);
+          
         setChats(formattedData);
 
       } else {
@@ -113,10 +116,62 @@ export default function ChatsScreen() {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    const count = selectedChatIds.length;
+    Alert.alert(
+      'Hapus Percakapan',
+      `Apakah Anda yakin ingin menghapus ${count} percakapan terpilih? Semua riwayat pesan akan dikosongkan secara fisik.`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        { 
+          text: 'Hapus', 
+          style: 'destructive',
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              const token = await SecureStore.getItemAsync('user_token');
+              // Hapus semua chat terpilih secara berurutan
+              for (const id of selectedChatIds) {
+                await fetch(`https://dev-ows-api.telkom-digital.id/v1/conversations/${id}`, {
+                  method: 'DELETE',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+              }
+              setSelectedChatIds([]);
+              fetchChatsFromBE();
+            } catch (error) {
+              Alert.alert('Error', 'Terjadi kesalahan saat menghapus beberapa percakapan.');
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleChatPress = (id: string, name: string) => {
-    router.push({
-      pathname: '/chat/[id]',
-      params: { id, name },
+    if (selectedChatIds.length > 0) {
+      toggleSelection(id);
+    } else {
+      router.push({
+        pathname: '/chat/[id]',
+        params: { id, name },
+      });
+    }
+  };
+
+  const handleLongPress = (id: string) => {
+    toggleSelection(id);
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedChatIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id);
+      } else {
+        return [...prev, id];
+      }
     });
   };
 
@@ -128,21 +183,37 @@ export default function ChatsScreen() {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.headerSafeArea}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../../assets/images/logo.jpg')}
-              style={styles.logoImage}
-            />
-            <Text style={styles.headerTitle}>ChatAja!</Text>
+      <SafeAreaView style={[styles.headerSafeArea, selectedChatIds.length > 0 && styles.headerSelected]}>
+        {selectedChatIds.length > 0 ? (
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <TouchableOpacity onPress={() => setSelectedChatIds([])} style={styles.backButton}>
+                <ArrowLeft color="#FFF" size={24} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitleSelected}>{selectedChatIds.length}</Text>
+            </View>
+            <View style={styles.headerIcons}>
+              <TouchableOpacity style={styles.iconButton} onPress={handleDeleteConversation}>
+                <Trash2 color="#FFF" size={24} />
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/profile')}>
-              <MoreVertical color="#333" size={24} />
-            </TouchableOpacity>
+        ) : (
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/images/logo.jpg')}
+                style={styles.logoImage}
+              />
+              <Text style={styles.headerTitle}>ChatAja!</Text>
+            </View>
+            <View style={styles.headerIcons}>
+              <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/profile')}>
+                <MoreVertical color="#333" size={24} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </SafeAreaView>
 
       <View style={styles.searchContainer}>
@@ -158,26 +229,29 @@ export default function ChatsScreen() {
         </View>
       </View>
 
-      <View style={styles.filterContainer}>
-        <TouchableOpacity 
-          style={[styles.filterChip, activeFilter === 'all' && styles.activeFilterChip]} 
-          onPress={() => setActiveFilter('all')}
-        >
-          <Text style={[styles.filterText, activeFilter === 'all' && styles.activeFilterText]}>All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.filterChip, activeFilter === 'unread' && styles.activeFilterChip]} 
-          onPress={() => setActiveFilter('unread')}
-        >
-          <Text style={[styles.filterText, activeFilter === 'unread' && styles.activeFilterText]}>Unread</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.filterChip, activeFilter === 'groups' && styles.activeFilterChip]} 
-          onPress={() => setActiveFilter('groups')}
-        >
-          <Text style={[styles.filterText, activeFilter === 'groups' && styles.activeFilterText]}>Groups</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Sembunyikan filter saat mode seleksi aktif agar fokus pada hapus */}
+      {selectedChatIds.length === 0 && (
+        <View style={styles.filterContainer}>
+          <TouchableOpacity 
+            style={[styles.filterChip, activeFilter === 'all' && styles.activeFilterChip]} 
+            onPress={() => setActiveFilter('all')}
+          >
+            <Text style={[styles.filterText, activeFilter === 'all' && styles.activeFilterText]}>All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.filterChip, activeFilter === 'unread' && styles.activeFilterChip]} 
+            onPress={() => setActiveFilter('unread')}
+          >
+            <Text style={[styles.filterText, activeFilter === 'unread' && styles.activeFilterText]}>Unread</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.filterChip, activeFilter === 'groups' && styles.activeFilterChip]} 
+            onPress={() => setActiveFilter('groups')}
+          >
+            <Text style={[styles.filterText, activeFilter === 'groups' && styles.activeFilterText]}>Groups</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {searchQuery.length > 0 ? (
         <FlatList
@@ -196,12 +270,13 @@ export default function ChatsScreen() {
             <TouchableOpacity 
               style={styles.searchResultItem} 
               onPress={() => handleChatPress(item.conversation_id, item.conversation?.title || item.sender?.name || 'User')}
+              onLongPress={() => handleLongPress(item.conversation_id)}
             >
-              <View style={styles.searchResultHeader}>
-                <Text style={styles.searchResultName}>{item.conversation?.title || item.sender?.name || item.conversation?.recipient?.name || 'User'}</Text>
-                <Text style={styles.searchResultTime}>
-                  {new Date(item.created_at).toLocaleDateString()}
-                </Text>
+              <View style={[styles.searchResultHeader, selectedChatIds.includes(item.conversation_id) && { backgroundColor: '#E7F5FE' }]}>
+                 <Text style={styles.searchResultName}>{item.conversation?.title || item.sender?.name || item.conversation?.recipient?.name || 'User'}</Text>
+                 <Text style={styles.searchResultTime}>
+                   {new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                 </Text>
               </View>
               <Text style={styles.searchResultText} numberOfLines={2}>
                 {item.content}
@@ -226,6 +301,8 @@ export default function ChatsScreen() {
               isOnline={item.isOnline}
               unreadCount={item.unreadCount}
               onPress={() => handleChatPress(item.id, item.name)}
+              onLongPress={() => handleLongPress(item.id)}
+              isSelected={selectedChatIds.includes(item.id)}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -242,7 +319,7 @@ export default function ChatsScreen() {
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.8}
-        onPress={() => router.push('/new-connection' as any)}
+        onPress={() => router.push('/new-chat' as any)}
       >
         <MessageSquarePlus color="#FFF" size={26} />
       </TouchableOpacity>
@@ -259,6 +336,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  headerSelected: {
+    backgroundColor: '#075E54', // Dark WhatsApp Green
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,6 +350,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  backButton: {
+    marginRight: 20,
+    padding: 4,
+  },
   logoImage: {
     width: 36,
     height: 36,
@@ -280,6 +364,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: '#000',
+  },
+  headerTitleSelected: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFF',
   },
   headerIcons: {
     flexDirection: 'row',

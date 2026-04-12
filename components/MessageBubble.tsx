@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { Pin, Check, CheckCheck, FileText, Play, Pause, Mic, Ban } from 'lucide-react-native';
+import { Pin, Check, CheckCheck, FileText, Play, Pause, Mic, Ban, Sparkles } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 
 interface MessageBubbleProps {
@@ -32,6 +32,8 @@ interface MessageBubbleProps {
   myUserId?: string;
   onReactionPress?: (emoji: string) => void;
   isDeleted?: boolean;
+  senderName?: string;
+  chatType?: 'dm' | 'group';
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -51,7 +53,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   reactions = [],
   myUserId,
   onReactionPress,
-  isDeleted
+  isDeleted,
+  senderName,
+  chatType = 'dm'
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -151,6 +155,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <View style={[styles.outerContainer, isMine ? styles.myOuterContainer : styles.theirOuterContainer]}>
+      {!isMine && chatType === 'group' && senderName && !isDeleted && (
+        <View style={styles.senderNameContainer}>
+          {senderName === 'Tera AI' && <Sparkles color="#A855F7" size={10} style={{ marginRight: 4 }} />}
+          <Text style={[styles.senderNameText, senderName === 'Tera AI' && styles.teraNameText]}>
+            {senderName}
+          </Text>
+        </View>
+      )}
       <TouchableOpacity 
         activeOpacity={isDeleted ? 1 : 0.8} 
         onLongPress={isDeleted ? undefined : onLongPress}
@@ -307,6 +319,28 @@ const styles = StyleSheet.create({
   theirOuterContainer: {
     alignItems: 'flex-start',
   },
+  senderNameText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginLeft: 15,
+    marginBottom: 2,
+    marginTop: 4,
+  },
+  senderNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 15,
+    marginBottom: 2,
+    marginTop: 4,
+  },
+  teraNameText: {
+    color: '#A855F7',
+    fontWeight: '700',
+    marginLeft: 0, // Reset margin since container handles it
+    marginTop: 0,
+    marginBottom: 0,
+  },
   container: {
     maxWidth: '85%',
   },
@@ -319,29 +353,45 @@ const styles = StyleSheet.create({
   bubble: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 16,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 1,
-    minWidth: 80,
+    minWidth: 70,
   },
   myBubble: {
-    backgroundColor: '#E6F0FA', // Light blueish grey
+    backgroundColor: '#E3F2FD',
+    borderTopRightRadius: 2,
+    borderTopLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   myDeletedBubble: {
-    backgroundColor: '#D9FDD3', // WhatsApp sender deleted green
+    backgroundColor: '#D9FDD3',
     borderWidth: 1,
     borderColor: '#C1E9BA',
+    borderTopRightRadius: 2,
+    borderTopLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   theirBubble: {
     backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
   theirDeletedBubble: {
-    backgroundColor: '#F0F2F5', // WhatsApp receiver deleted grey
+    backgroundColor: '#F0F2F5',
     borderWidth: 1,
     borderColor: '#E1E4E8',
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
   replyContainer: {
     flexDirection: 'row',
@@ -382,7 +432,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: 2,
+    marginTop: -2,
+    alignSelf: 'flex-end',
   },
   pinIcon: {
     marginRight: 4,
@@ -541,9 +592,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginRight: 4,
-    marginBottom: 4,
+    marginBottom: 6,
     borderWidth: 1,
-    borderColor: '#FFF',
+    borderColor: '#F0F0F0',
   },
   myReactionChip: {
     backgroundColor: '#D1FAE5',

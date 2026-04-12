@@ -6,7 +6,9 @@ import { useNotifications } from '@/hooks/useNotifications';
 
 export default function RootLayout() {
   useFrameworkReady();
-  useNotifications();
+  
+  // Fitur Push Notification dinonaktifkan sementara karena BE belum siap
+  // useNotifications();
 
   return (
     <>

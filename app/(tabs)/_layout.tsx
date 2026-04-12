@@ -1,86 +1,109 @@
-import { Slot } from 'expo-router';
-
-export default function TabLayout() {
-  return <Slot />;
-}
-
-/*
 import { Tabs } from 'expo-router';
-import { Hop as Home, Calendar, Users, Network, MessageSquare, Mic } from 'lucide-react-native';
+import { StyleSheet, View, Text } from 'react-native';
+import { MessageSquare, Calendar } from 'lucide-react-native';
+
+const TabIcon = ({ Icon, focused, color }: { Icon: any; focused: boolean; color: string }) => {
+  return (
+    <View style={[
+      styles.iconWrapper,
+      focused && styles.pillContainer
+    ]}>
+      <Icon size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
+    </View>
+  );
+};
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#00BCD4', // Changed to purple to match the chat theme
+        tabBarActiveTintColor: '#065F46', // Dark green for text/icon
         tabBarInactiveTintColor: '#666',
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: '#E0E0E0',
-        },
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
           href: null,
-          tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} strokeWidth={2} />
-          ),
+          tabBarStyle: { display: 'none' }, // Sembunyikan tab bar di halaman login
         }}
       />
       <Tabs.Screen
-        name="agenda"
+        name="home"
         options={{
-          title: 'Agenda',
           href: null,
-          tabBarIcon: ({ size, color }) => (
-            <Calendar size={size} color={color} strokeWidth={2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="speakers"
-        options={{
-          title: 'Speakers',
-          href: null,
-          tabBarIcon: ({ size, color }) => (
-            <Users size={size} color={color} strokeWidth={2} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="networking"
-        options={{
-          title: 'Networking',
-          href: null,
-          tabBarIcon: ({ size, color }) => (
-            <Network size={size} color={color} strokeWidth={2} />
-          ),
         }}
       />
       <Tabs.Screen
         name="chats"
         options={{
           title: 'Chat',
-          href: null,
-          tabBarIcon: ({ size, color }) => (
-            <MessageSquare size={size} color={color} strokeWidth={2} />
+          tabBarLabel: 'Chat',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={MessageSquare} focused={focused} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="agenda"
+        options={{
+          title: 'Itinerary',
+          tabBarLabel: 'Itinerary',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={Calendar} focused={focused} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="speakers"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="networking"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
         name="voice-ai"
         options={{
-          title: 'AI Smart',
           href: null,
-          tabBarIcon: ({ size, color }) => (
-            <Mic size={size} color={color} strokeWidth={2} />
-          ),
         }}
       />
     </Tabs>
   );
 }
-*/
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 0,
+    elevation: 10,
+    height: 65,
+    paddingBottom: 10,
+    paddingTop: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+  },
+  tabBarLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  iconWrapper: {
+    width: 64,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
+    marginBottom: 4,
+  },
+  pillContainer: {
+    backgroundColor: '#D1FAE5', // Light green pill
+  },
+});

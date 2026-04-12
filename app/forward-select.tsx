@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Send, CheckCircle2, Circle, User } from 'lucide-react-native';
 import * as SecureStore from 'expo-secure-store';
@@ -62,7 +62,6 @@ export default function ForwardSelectScreen() {
       });
 
       if (response.ok) {
-        Alert.alert('Berhasil', 'Pesan telah diteruskan');
         router.back();
       } else {
         const errorData = await response.json();
@@ -160,12 +159,13 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFF',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    height: 65,
+    paddingHorizontal: 12,
+    height: 72,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
@@ -179,11 +179,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
+    color: '#1A1A1A',
   },
   headerSubtitle: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    color: '#888',
   },
   sendButton: {
     width: 45,
