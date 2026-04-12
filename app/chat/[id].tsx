@@ -1070,6 +1070,7 @@ export default function ChatDetailScreen() {
                       onReactionPress={(emoji) => handleReact(emoji, item.id)}
                       senderName={item.senderName}
                       chatType={item.senderName === 'Tera AI' ? 'group' : chatType as any}
+                      status={item.status}
                     />
                   );
                 }}
