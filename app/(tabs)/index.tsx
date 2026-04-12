@@ -214,7 +214,8 @@ export default function OnboardingScreen() {
                     <Text style={styles.illustrationEmoji}>{item.emoji}</Text>
                   </View>
 
-                  <View style={styles.textContainer}>
+                  <View style={styles.textContainer
+                  }>
                     <Text style={styles.titleText}>{item.title}</Text>
                     <Text style={styles.subtitleText}>{item.subtitle}</Text>
                     <Text style={styles.descText}>{item.desc}</Text>

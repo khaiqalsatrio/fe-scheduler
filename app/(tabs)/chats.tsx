@@ -159,20 +159,20 @@ export default function ChatsScreen() {
       </View>
 
       <View style={styles.filterContainer}>
-        <TouchableOpacity 
-          style={[styles.filterChip, activeFilter === 'all' && styles.activeFilterChip]} 
+        <TouchableOpacity
+          style={[styles.filterChip, activeFilter === 'all' && styles.activeFilterChip]}
           onPress={() => setActiveFilter('all')}
         >
           <Text style={[styles.filterText, activeFilter === 'all' && styles.activeFilterText]}>All</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.filterChip, activeFilter === 'unread' && styles.activeFilterChip]} 
+        <TouchableOpacity
+          style={[styles.filterChip, activeFilter === 'unread' && styles.activeFilterChip]}
           onPress={() => setActiveFilter('unread')}
         >
           <Text style={[styles.filterText, activeFilter === 'unread' && styles.activeFilterText]}>Unread</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.filterChip, activeFilter === 'groups' && styles.activeFilterChip]} 
+        <TouchableOpacity
+          style={[styles.filterChip, activeFilter === 'groups' && styles.activeFilterChip]}
           onPress={() => setActiveFilter('groups')}
         >
           <Text style={[styles.filterText, activeFilter === 'groups' && styles.activeFilterText]}>Groups</Text>
@@ -193,8 +193,8 @@ export default function ChatsScreen() {
             </View>
           )}
           renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.searchResultItem} 
+            <TouchableOpacity
+              style={styles.searchResultItem}
               onPress={() => handleChatPress(item.conversation_id, item.conversation?.title || item.sender?.name || 'User')}
             >
               <View style={styles.searchResultHeader}>

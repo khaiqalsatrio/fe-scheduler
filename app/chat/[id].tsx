@@ -91,7 +91,7 @@ export default function ChatDetailScreen() {
 
     if (isSameYear && isSameMonth && diff === 0) return 'Hari Ini';
     if (isSameYear && isSameMonth && diff === 1) return 'Kemarin';
-    
+
     return date.toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
@@ -214,7 +214,7 @@ export default function ChatDetailScreen() {
       });
 
       newSocket.on('message.delivered', (data: any) => {
-        setMessages(prev => prev.map(m => 
+        setMessages(prev => prev.map(m =>
           m.id === data.messageId ? { ...m, status: 'delivered' } : m
         ));
       });
@@ -222,12 +222,12 @@ export default function ChatDetailScreen() {
       newSocket.on('message.read', (data: any) => {
         // Jika lastMessageId tersedia, tandai semua pesan sebelumnya sebagai read
         setMessages(prev => prev.map(m => {
-           // Sederhananya, jika pengirimnya bukan saya, dan statusnya belum read, perbarui
-           // Namun biasanya kita hanya peduli centang biru untuk pesan KITA sendiri
-           if (m.isMine && m.status !== 'read') {
-             return { ...m, status: 'read' };
-           }
-           return m;
+          // Sederhananya, jika pengirimnya bukan saya, dan statusnya belum read, perbarui
+          // Namun biasanya kita hanya peduli centang biru untuk pesan KITA sendiri
+          if (m.isMine && m.status !== 'read') {
+            return { ...m, status: 'read' };
+          }
+          return m;
         }));
       });
 
@@ -239,7 +239,7 @@ export default function ChatDetailScreen() {
             // Toggle logic: if user already has this exact emoji, remove it. 
             // Otherwise, remove any existing emoji from this user and add the new one.
             const existingReactionIndex = currentReactions.findIndex((r: any) => r.user_id === data.user_id);
-            
+
             let newReactions;
             if (existingReactionIndex > -1) {
               const oldEmoji = currentReactions[existingReactionIndex].emoji;
@@ -263,25 +263,25 @@ export default function ChatDetailScreen() {
 
       newSocket.on('message.pinned', (data: any) => {
         // data: { messageId, isPinned, conversationId }
-        setMessages(prev => prev.map(m => 
+        setMessages(prev => prev.map(m =>
           m.id === data.messageId ? { ...m, isPinned: data.isPinned } : m
         ));
       });
 
       newSocket.on('message.updated', (msg: any) => {
-        setMessages(prev => prev.map(m => 
-          (m.id === msg.id || m.id === msg.client_message_id) 
-          ? { ...m, text: msg.content, isEdited: !!msg.edited_at } 
-          : m
+        setMessages(prev => prev.map(m =>
+          (m.id === msg.id || m.id === msg.client_message_id)
+            ? { ...m, text: msg.content, isEdited: !!msg.edited_at }
+            : m
         ));
       });
 
       newSocket.on('message.deleted', (data: any) => {
         // data structure: { messageId, conversationId }
-        setMessages(prev => prev.map(m => 
-          (m.id === data.messageId || m.id === data.clientMessageId) 
-          ? { ...m, isDeleted: true } 
-          : m
+        setMessages(prev => prev.map(m =>
+          (m.id === data.messageId || m.id === data.clientMessageId)
+            ? { ...m, isDeleted: true }
+            : m
         ));
       });
 
@@ -333,7 +333,7 @@ export default function ChatDetailScreen() {
         userId = payloadObj.id || payloadObj.sub || '';
         setMyId(userId);
         myIdRef.current = userId;
-      } catch(e) {}
+      } catch (e) { }
 
       if (!isLoadMore) {
         // Tandai pesan sebagai dibaca (REST)
@@ -352,44 +352,45 @@ export default function ChatDetailScreen() {
         }
       });
       const jsonResp = await response.json();
-      
+
       if (response.ok) {
         const data = jsonResp.messages || jsonResp.data || [];
         if (Array.isArray(data)) {
-           if (data.length < limit) {
-             setHasMore(false);
-           }
+          if (data.length < limit) {
+            setHasMore(false);
+          }
 
-           const formattedMessages = data.map((m: any) => ({ created_at: m.created_at || new Date().toISOString(),
-             id: m.id?.toString() || m.client_message_id || Math.random().toString(),
-             text: m.content || m.text || '',
-             time: m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) : new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }),
-             isMine: userId ? m.sender_id === userId : (m.is_mine === true),
-             isPinned: m.is_pinned || false,
-             status: m.status || (m.read_at ? 'read' : 'sent'), isEdited: !!m.edited_at, isDeleted: !!m.deleted_at,
-             reactions: m.reactions || [],
-             replyTo: m.reply_to_message ? {
-                id: m.reply_to_message.id,
-                text: m.reply_to_message.content,
-                name: m.reply_to_message.sender_name || 'User'
-             } : undefined,
-             file: m.meta?.file ? {
-               url: m.meta.file.url,
-               name: m.meta.file.name || 'file',
-               type: m.meta.file.type || (m.type === 'image' ? 'image/jpeg' : m.type === 'voice' ? 'audio/mp3' : 'application/octet-stream'),
-             } : undefined
-           }));
+          const formattedMessages = data.map((m: any) => ({
+            created_at: m.created_at || new Date().toISOString(),
+            id: m.id?.toString() || m.client_message_id || Math.random().toString(),
+            text: m.content || m.text || '',
+            time: m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) : new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            isMine: userId ? m.sender_id === userId : (m.is_mine === true),
+            isPinned: m.is_pinned || false,
+            status: m.status || (m.read_at ? 'read' : 'sent'), isEdited: !!m.edited_at, isDeleted: !!m.deleted_at,
+            reactions: m.reactions || [],
+            replyTo: m.reply_to_message ? {
+              id: m.reply_to_message.id,
+              text: m.reply_to_message.content,
+              name: m.reply_to_message.sender_name || 'User'
+            } : undefined,
+            file: m.meta?.file ? {
+              url: m.meta.file.url,
+              name: m.meta.file.name || 'file',
+              type: m.meta.file.type || (m.type === 'image' ? 'image/jpeg' : m.type === 'voice' ? 'audio/mp3' : 'application/octet-stream'),
+            } : undefined
+          }));
 
-           if (isLoadMore) {
-             setMessages(prev => [...formattedMessages.reverse(), ...prev]);
-           } else {
-             setMessages(formattedMessages.reverse());
-             setIsInitialLoad(true);
-           }
+          if (isLoadMore) {
+            setMessages(prev => [...formattedMessages.reverse(), ...prev]);
+          } else {
+            setMessages(formattedMessages.reverse());
+            setIsInitialLoad(true);
+          }
 
-           if (data.length > 0) {
-             setOldestCursor(data[data.length - 1].created_at);
-           }
+          if (data.length > 0) {
+            setOldestCursor(data[data.length - 1].created_at);
+          }
         }
       } else {
         console.log('Gagal ambil histori pesan:', jsonResp.message);
@@ -430,7 +431,7 @@ export default function ChatDetailScreen() {
       replyTo: replyingTo ? { name: replyingTo.isMine ? 'Anda' : (name as string || 'Teman'), text: replyingTo.text } : undefined,
       created_at: new Date().toISOString(),
     };
-    
+
     // UI Optimistik Update
     setMessages(prev => [...prev, newMessage]);
     setReplyingTo(null);
@@ -471,7 +472,7 @@ export default function ChatDetailScreen() {
 
   const handleFileSend = async (fileAsset: any, type: string) => {
     const clientId = Date.now().toString();
-    
+
     // UI Optimistik
     const newMessage: Message = {
       id: clientId,
@@ -485,7 +486,7 @@ export default function ChatDetailScreen() {
       },
       created_at: new Date().toISOString(),
     };
-    
+
     setMessages(prev => [...prev, newMessage]);
     setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
 
@@ -497,14 +498,14 @@ export default function ChatDetailScreen() {
       formData.append('conversationId', id as string);
       formData.append('clientMessageId', clientId);
       formData.append('type', type); // 'image' or 'file'
-      
+
       // Di React Native, FormData memerlukan format khusus ini
       const fileToUpload = {
         uri: Platform.OS === 'android' ? fileAsset.uri : fileAsset.uri.replace('file://', ''),
         type: fileAsset.mimeType || (type === 'image' ? 'image/jpeg' : 'application/octet-stream'),
         name: fileAsset.name || (type === 'image' ? 'photo.jpg' : 'file'),
       };
-      
+
       formData.append('file', fileToUpload as any);
 
       const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/messages', {
@@ -590,7 +591,7 @@ export default function ChatDetailScreen() {
         },
         body: JSON.stringify({ isPinned: newPinStatus })
       });
-      
+
       if (response.ok) {
         // No alert per user request
       }
@@ -647,7 +648,7 @@ export default function ChatDetailScreen() {
     console.log('Menghapus pesan lokal:', messageId);
     // Optimistic UI - filter out immediately
     setMessages(prev => prev.filter(m => m.id !== messageId));
-    
+
     try {
       const token = await SecureStore.getItemAsync('user_token');
       const response = await fetch(`https://dev-ows-api.telkom-digital.id/v1/messages/${messageId}`, {
@@ -665,7 +666,7 @@ export default function ChatDetailScreen() {
     if (socket) {
       socket.emit('message.delete', { messageId, forEveryone: true });
       // Optimistic UI - mark as deleted
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         (m.id === messageId) ? { ...m, isDeleted: true } : m
       ));
     }
@@ -680,7 +681,7 @@ export default function ChatDetailScreen() {
       if (m.id === targetId) {
         const currentReactions = m.reactions || [];
         const existingIndex = currentReactions.findIndex((r: any) => r.user_id === myId);
-        
+
         let newReactions;
         if (existingIndex > -1) {
           if (currentReactions[existingIndex].emoji === emoji) {
@@ -730,11 +731,11 @@ export default function ChatDetailScreen() {
     // Karena list diurutkan dari atas ke bawah, pesan berikutnya ada di index + 1
     for (let i = currentIndex + 1; i < messages.length; i++) {
       const nextMsg = messages[i];
-      const isVoice = nextMsg.file?.type?.startsWith('audio/') || 
-                      nextMsg.file?.type === 'voice' ||
-                      nextMsg.file?.url?.toLowerCase().endsWith('.m4a') ||
-                      nextMsg.file?.url?.toLowerCase().endsWith('.mp3');
-      
+      const isVoice = nextMsg.file?.type?.startsWith('audio/') ||
+        nextMsg.file?.type === 'voice' ||
+        nextMsg.file?.url?.toLowerCase().endsWith('.m4a') ||
+        nextMsg.file?.url?.toLowerCase().endsWith('.mp3');
+
       if (isVoice) {
         setPlayingVoiceId(nextMsg.id);
         break;
@@ -751,9 +752,9 @@ export default function ChatDetailScreen() {
     setIsMenuVisible(false);
     router.push({
       pathname: '/forward-select' as any,
-      params: { 
+      params: {
         messageId: selectedMessage.id,
-        content: selectedMessage.text 
+        content: selectedMessage.text
       }
     });
   };
@@ -796,9 +797,9 @@ export default function ChatDetailScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.iconButton} onPress={() => setIsSearchingInside(true)}>
+              {/* <TouchableOpacity style={styles.iconButton} onPress={() => setIsSearchingInside(true)}>
                 <Search color="#666" size={22} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               <TouchableOpacity style={styles.iconButton}>
                 <MoreVertical color="#666" size={22} />
               </TouchableOpacity>
@@ -850,7 +851,7 @@ export default function ChatDetailScreen() {
               </View>
             )}
             renderItem={({ item }) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.localSearchResultItem}
                 onPress={() => setIsSearchingInside(false)}
               >
@@ -1031,9 +1032,9 @@ export default function ChatDetailScreen() {
         onClose={() => setIsMenuVisible(false)}
         isPinned={selectedMessage?.isPinned}
         canEdit={
-          !!(selectedMessage?.isMine && 
-          selectedMessage?.created_at && 
-          (new Date().getTime() - new Date(selectedMessage.created_at).getTime() < 15 * 60 * 1000))
+          !!(selectedMessage?.isMine &&
+            selectedMessage?.created_at &&
+            (new Date().getTime() - new Date(selectedMessage.created_at).getTime() < 15 * 60 * 1000))
         }
         onPin={handlePin}
         onReply={handleReply}
