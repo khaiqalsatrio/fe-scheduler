@@ -48,7 +48,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (recording) {
-        recording.stopAndUnloadAsync().catch(() => {});
+        recording.stopAndUnloadAsync().catch(() => { });
       }
     };
   }, []); // Hapus dependensi [recording] agar tidak mengganggu proses rekam
@@ -91,11 +91,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         },
         1000 // Update tiap detik
       );
-      
+
       setRecording(newRecording);
       setIsRecording(true);
       setRecordingDuration(0);
-      
+
       console.log('Recording started');
     } catch (err) {
       console.error('Failed to start recording', err);
@@ -109,12 +109,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     setIsRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    
+
     try {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       console.log('Recording stopped and stored at', uri);
-      
+
       if (uri && onFileSend) {
         // Buat objek file buatan untuk onFileSend
         const fileAsset = {
@@ -124,7 +124,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         };
         onFileSend(fileAsset, 'voice');
       }
-      
+
       setRecording(null);
     } catch (err) {
       console.error('Failed to stop recording', err);
@@ -231,7 +231,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           <TouchableOpacity
             style={[
-              styles.sendButton, 
+              styles.sendButton,
               isEditing && { backgroundColor: '#4CAF50' },
               isRecording && { backgroundColor: '#FF5252' }
             ]}

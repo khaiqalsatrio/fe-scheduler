@@ -63,15 +63,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [duration, setDuration] = useState(0);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
 
-  const isImage = file?.type?.startsWith('image/') || 
-                  file?.url?.toLowerCase().endsWith('.jpg') || 
-                  file?.url?.toLowerCase().endsWith('.png') ||
-                  file?.url?.toLowerCase().endsWith('.jpeg');
+  const hasImageExtension = (str?: string) => {
+    const s = str?.toLowerCase();
+    return s?.endsWith('.jpg') || s?.endsWith('.jpeg') || s?.endsWith('.png') || s?.endsWith('.gif') || s?.endsWith('.webp');
+  };
 
-  const isVoice = file?.type?.startsWith('audio/') || 
-                  file?.type === 'voice' ||
-                  file?.url?.toLowerCase().endsWith('.m4a') ||
-                  file?.url?.toLowerCase().endsWith('.mp3');
+  const hasVoiceExtension = (str?: string) => {
+    const s = str?.toLowerCase();
+    return s?.endsWith('.m4a') || s?.endsWith('.mp3') || s?.endsWith('.wav') || s?.endsWith('.aac');
+  };
+
+  const isImage = file?.type?.startsWith('image/') || hasImageExtension(file?.url) || hasImageExtension(file?.name);
+  const isVoice = file?.type?.startsWith('audio/') || file?.type === 'voice' || hasVoiceExtension(file?.url) || hasVoiceExtension(file?.name);
 
   // Jika pesan hanya berisi label placeholder "📷 Gambar", kita anggap tidak ada teks (ala WA)
   const isOnlyImage = isImage && (message === '📷 Gambar' || !message.trim());

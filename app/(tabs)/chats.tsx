@@ -267,8 +267,8 @@ export default function ChatsScreen() {
             </View>
           )}
           renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.searchResultItem} 
+            <TouchableOpacity
+              style={styles.searchResultItem}
               onPress={() => handleChatPress(item.conversation_id, item.conversation?.title || item.sender?.name || 'User')}
               onLongPress={() => handleLongPress(item.conversation_id)}
             >
