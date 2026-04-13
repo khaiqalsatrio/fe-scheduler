@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, View, Text } from 'react-native';
-import { MessageSquare, Calendar } from 'lucide-react-native';
+import { MessageSquare, Calendar, Users } from 'lucide-react-native';
 
 const TabIcon = ({ Icon, focused, color }: { Icon: any; focused: boolean; color: string }) => {
   return (
@@ -47,10 +47,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="channel"
+        options={{
+          title: 'Channel',
+          tabBarLabel: 'Channel',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon Icon={Users} focused={focused} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="agenda"
         options={{
-          title: 'Itinerary',
-          tabBarLabel: 'Itinerary',
+          title: 'Kegiatan',
+          tabBarLabel: 'Kegiatan',
           tabBarIcon: ({ focused, color }) => (
             <TabIcon Icon={Calendar} focused={focused} color={color} />
           ),
