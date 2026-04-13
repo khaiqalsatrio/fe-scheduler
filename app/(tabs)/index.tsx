@@ -154,7 +154,7 @@ export default function OnboardingScreen() {
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <Image
-          source={require('../../assets/images/logo.jpg')}
+          source={require('../../assets/images/logo.png')}
           style={styles.logoImageLarge}
         />
         <TouchableOpacity style={styles.headerExploreBtn} activeOpacity={0.7} onPress={() => router.replace('/(tabs)/chats')}>

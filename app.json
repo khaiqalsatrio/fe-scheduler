@@ -4,7 +4,7 @@
     "slug": "chataja",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.jpg",
+    "icon": "./assets/images/logo.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,19 +14,19 @@
     "android": {
       "package": "com.bolt.scheduler",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.jpg",
+        "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
       }
     },
     "splash": {
-      "image": "./assets/images/logo.jpg",
+      "image": "./assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/logo.jpg"
+      "favicon": "./assets/images/logo.png"
     },
     "plugins": [
       "expo-router",

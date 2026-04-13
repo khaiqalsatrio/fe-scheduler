@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View,
@@ -11,8 +11,13 @@ import {
   StatusBar,
   Modal,
   TextInput,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { MapPin, User, Sparkle, X } from 'lucide-react-native';
+import { MapPin, User, Sparkle, X, AlertCircle } from 'lucide-react-native';
+import { Alert } from 'react-native';
+import agendaService from '../../services/agendaService';
+import { AgendaItem } from '../../types/agenda';
 
 const DAYS = [
   { id: 1, label: 'Day 1' },
@@ -32,6 +37,7 @@ interface Activity {
   title: string;
   location: string;
   speaker?: string;
+  isUserItem?: boolean;
 }
 
 const MOCK_DATA: Record<number, Record<string, Activity[]>> = {
@@ -70,6 +76,41 @@ export default function AgendaScreen() {
   const [activityTitle, setActivityTitle] = useState('');
   const [activityNotes, setActivityNotes] = useState('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  
+  // API State
+  const [agendas, setAgendas] = useState<AgendaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchAgendas();
+  }, []);
+
+  const fetchAgendas = async (isRefreshing = false) => {
+    if (isRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+
+    try {
+      const response = await agendaService.getAgendas({ limit: 50 });
+      if (response.status) {
+        setAgendas(response.data);
+      } else {
+        setError(response.message || 'Gagal mengambil data agenda');
+      }
+    } catch (err: any) {
+      setError('Terjadi kesalahan koneksi ke server');
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const formatTimeRange = (hourStr: string) => {
     const parts = hourStr.split(' ');
@@ -84,14 +125,105 @@ export default function AgendaScreen() {
     return `${start} - ${end}`;
   };
 
-  const handleSaveActivity = () => {
-    // Logic to save can be added here
-    setIsAddModalVisible(false);
-    setActivityTitle('');
-    setActivityNotes('');
+  const handleSaveActivity = async () => {
+    if (!activityTitle) return;
+    
+    setIsSaving(true);
+    try {
+      // Base date: April 8, 2026 (based on user's example)
+      const dayOffset = selectedDay - 1;
+      const baseDate = new Date('2026-04-08T00:00:00Z');
+      baseDate.setUTCDate(baseDate.getUTCDate() + dayOffset);
+      
+      const dateStr = baseDate.toISOString().split('T')[0];
+      
+      // Parse time range (e.g., "06:00 - 07:00")
+      const [startTime, endTime] = selectedTimeSlot.split(' - ');
+      
+      const payload = {
+        event_id: "3fe7ae15-f034-4006-ad45-e7d2607787b1", // Fixed as per requirement
+        title: activityTitle,
+        description: activityNotes || '',
+        order_index: agendas.length + 1,
+        status: "pending",
+        start_at: `${dateStr}T${startTime}:00Z`,
+        end_at: `${dateStr}T${endTime}:00Z`,
+      };
+
+      const result = await agendaService.createAgenda(payload);
+      
+      if (result.status) {
+        Alert.alert('Sukses', 'Agenda berhasil ditambahkan');
+        setIsAddModalVisible(false);
+        setActivityTitle('');
+        setActivityNotes('');
+        fetchAgendas(); // Refresh the list
+      } else {
+        Alert.alert('Gagal', result.message || 'Gagal menyimpan agenda');
+      }
+    } catch (err: any) {
+      console.error('Save failed:', err);
+      Alert.alert('Error', 'Terjadi kesalahan saat menyimpan agenda');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const activities = MOCK_DATA[selectedDay] || {};
+  const formatLocalTime = (isoStr?: string) => {
+    if (!isoStr) return '--:--';
+    const date = new Date(isoStr);
+    return date.getUTCHours().toString().padStart(2, '0') + ':' + 
+           date.getUTCMinutes().toString().padStart(2, '0');
+  };
+
+  const getHourLabel = (dateStr?: string) => {
+    if (!dateStr) return '9 AM'; 
+    const date = new Date(dateStr);
+    let hours = date.getUTCHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; 
+    return `${hours} ${ampm}`;
+  };
+
+  const processAgendas = () => {
+    const grouped: Record<string, Activity[]> = {};
+    
+    agendas.forEach(item => {
+      const hourLabel = getHourLabel(item.start_at || item.created_at);
+      if (!grouped[hourLabel]) {
+        grouped[hourLabel] = [];
+      }
+      
+      const timeRange = (item.start_at && item.end_at) 
+        ? `${formatLocalTime(item.start_at)} - ${formatLocalTime(item.end_at)}`
+        : (item.time || 'Waktu tidak ditentukan');
+
+      grouped[hourLabel].push({
+        id: item.id,
+        time: timeRange,
+        title: item.title,
+        location: item.location || 'Lokasi tidak tersedia',
+        speaker: item.speaker,
+        isUserItem: item.status === 'pending' // Based on implementation plan
+      });
+    });
+
+    return grouped;
+  };
+
+  const handleDeleteAgenda = async (id: string) => {
+    try {
+      // Direct delete as requested (no confirmation)
+      await agendaService.deleteAgenda(id);
+      fetchAgendas(); // Refresh list
+    } catch (err) {
+      console.error('Delete failed:', err);
+      Alert.alert('Error', 'Gagal menghapus agenda');
+    }
+  };
+
+  const activities = agendas.length > 0 ? processAgendas() : {};
 
   const handleSendToAI = () => {
     setIsModalVisible(false);
@@ -131,8 +263,28 @@ export default function AgendaScreen() {
       </View>
 
       {/* Timeline */}
-      <ScrollView style={styles.timelineContainer} showsVerticalScrollIndicator={false}>
-        {HOURS.map((hour) => {
+      <ScrollView 
+        style={styles.timelineContainer} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => fetchAgendas(true)} />
+        }
+      >
+        {loading && !refreshing ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#7C3AED" />
+            <Text style={styles.loadingText}>Memuat kegiatan...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.centerContainer}>
+            <AlertCircle size={48} color="#EF4444" />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchAgendas()}>
+              <Text style={styles.retryButtonText}>Coba Lagi</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          HOURS.map((hour) => {
           const hourActivities = activities[hour] || [];
           return (
             <View key={hour} style={styles.hourRow}>
@@ -143,9 +295,19 @@ export default function AgendaScreen() {
               <View style={styles.hourContent}>
                 {hourActivities.length > 0 ? (
                   hourActivities.map((activity) => (
-                    <View key={activity.id} style={styles.activityCard}>
+                    <View key={activity.id} style={[
+                      styles.activityCard,
+                      activity.isUserItem && styles.activityCardUser
+                    ]}>
                       <View style={styles.activityCardContent}>
-                        <Text style={styles.activityTime}>{activity.time}</Text>
+                        <View style={styles.activityHeader}>
+                          <Text style={styles.activityTime}>{activity.time}</Text>
+                          {activity.isUserItem && (
+                            <TouchableOpacity onPress={() => handleDeleteAgenda(activity.id)}>
+                              <X size={16} color="#EF4444" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                         <Text style={styles.activityTitle}>{activity.title}</Text>
                         <View style={styles.activityMeta}>
                           <MapPin size={12} color="#8E99AF" />
@@ -174,7 +336,8 @@ export default function AgendaScreen() {
               </View>
             </View>
           );
-        })}
+        })
+      )}
         {/* Extra padding at bottom for FAB */}
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -233,12 +396,16 @@ export default function AgendaScreen() {
             <TouchableOpacity 
               style={[
                 styles.saveButton,
-                !activityTitle && styles.saveButtonDisabled
+                (!activityTitle || isSaving) && styles.saveButtonDisabled
               ]} 
               onPress={handleSaveActivity}
-              disabled={!activityTitle}
+              disabled={!activityTitle || isSaving}
             >
-              <Text style={styles.saveButtonText}>Simpan</Text>
+              {isSaving ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.saveButtonText}>Simpan</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -377,6 +544,16 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#3B82F6',
     padding: 12,
+  },
+  activityCardUser: {
+    backgroundColor: '#F0FDF4',
+    borderLeftColor: '#22C55E',
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   activityCardContent: {
     gap: 4,
@@ -547,18 +724,46 @@ const styles = StyleSheet.create({
     height: 100,
   },
   saveButton: {
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#22C55E', // Green when active
     paddingVertical: 16,
     borderRadius: 99,
     alignItems: 'center',
     marginTop: 8,
   },
   saveButtonDisabled: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E2E8F0', // Grey when inactive
   },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
+  },
+  centerContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  errorText: {
+    fontSize: 15,
+    color: '#EF4444',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  retryButton: {
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  retryButtonText: {
+    color: '#FFF',
+    fontWeight: '700',
   },
 });

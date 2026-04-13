@@ -138,7 +138,7 @@ export default function ChatsScreen() {
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../../assets/images/logo.jpg')}
+                source={require('../../assets/images/logo.png')}
                 style={styles.logoImage}
               />
               <Text style={styles.headerTitle}>ChatAja!</Text>
