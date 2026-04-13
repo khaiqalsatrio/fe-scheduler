@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, ScrollView, FlatList, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Search, User } from 'lucide-react-native';
-import * as SecureStore from 'expo-secure-store';
+import ChatService from '../services/chatService';
 
 const CATEGORIES = ['Semua', 'Speaker', 'Designer', 'PM', 'Engineer'];
 
@@ -35,45 +35,16 @@ export default function NewConnectionScreen() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
+      const data = await ChatService.searchUsers(searchQuery);
       
-      let url = 'https://dev-ows-api.telkom-digital.id/v1/users/recipients?limit=50&page=1';
-      if (searchQuery) {
-        url += `&q=${encodeURIComponent(searchQuery)}`;
-      }
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const jsonResp = await response.json();
-      console.log('Search Recipients Result:', jsonResp);
-
-      if (response.ok) {
-        // Ambil array dari property data, jika tidak ada cek jika jsonResp sendiri adalah array
-        const data = Array.isArray(jsonResp.data) ? jsonResp.data : (Array.isArray(jsonResp) ? jsonResp : []);
-        
-        if (Array.isArray(data)) {
-            const formattedData: ConnectionData[] = data.map((item: any) => ({
-              id: item.id?.toString() || Math.random().toString(),
-              name: item.name || item.full_name || item.username || 'User',
-              role: item.position || item.role || item.jobTitle || 'Member',
-              badge: item.badge || '',
-              avatar: item.avatar || '',
-            }));
-           setConnections(formattedData);
-        }
-      } else {
-        console.warn('Gagal memuat list users:', jsonResp.message);
-      }
+      const formattedData: ConnectionData[] = data.map((item: any) => ({
+        id: item.id?.toString() || Math.random().toString(),
+        name: item.name || item.full_name || item.username || 'User',
+        role: item.position || item.role || item.jobTitle || 'Member',
+        badge: item.badge || '',
+        avatar: item.avatar || '',
+      }));
+      setConnections(formattedData);
     } catch (error) {
       console.warn('Error fetch users:', error);
     } finally {
@@ -86,41 +57,17 @@ export default function NewConnectionScreen() {
     
     setIsCreatingChat(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      if (!token) {
-        setIsCreatingChat(false);
-        return;
-      }
-
-      // API docs: POST /conversations (multipart/form-data)
-      const formData = new FormData();
-      formData.append('type', 'dm');
-      formData.append('participantIds', selectedId);
+      const data = await ChatService.createConversation('dm', null, selectedId);
+      const personName = connections.find(c => c.id === selectedId)?.name || 'Chat';
       
-      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData,
+      router.push({
+        pathname: '/chat/[id]',
+        params: { id: data.id, name: personName }
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // ID percakapan didapat dari response.id
-        const conversationId = data.id;
-        const personName = connections.find(c => c.id === selectedId)?.name || 'Chat';
-        
-        router.push({
-          pathname: '/chat/[id]',
-          params: { id: conversationId, name: personName }
-        });
-      } else {
-        console.warn('Gagal membuat percakapan:', data.message);
-      }
-    } catch (error) {
+    } catch (error: any) {
        console.warn('Error starting chat:', error);
+       const msg = error.response?.data?.message || 'Gagal memulai chat';
+       alert(msg);
     } finally {
       setIsCreatingChat(false);
     }

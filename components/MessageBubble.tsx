@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Pin, Check, CheckCheck, FileText, Play, Pause, Mic, Ban, Sparkles } from 'lucide-react-native';
 import { Audio } from 'expo-av';
@@ -36,7 +36,7 @@ interface MessageBubbleProps {
   chatType?: 'dm' | 'group';
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({
+export const MessageBubble = memo(({
   id,
   message,
   time,
@@ -56,7 +56,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isDeleted,
   senderName,
   chatType = 'dm'
-}) => {
+}: MessageBubbleProps) => {
+  // ... rest of component
   const [isPlaying, setIsPlaying] = useState(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [position, setPosition] = useState(0);
@@ -309,7 +310,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
     </View>
   );
-};
+}, (prev, next) => {
+  // Optimisasi: Render ulang hanya jika props penting berubah bagi pesan ini.
+  if (prev.id !== next.id) return false;
+  if (prev.message !== next.message) return false;
+  if (prev.status !== next.status) return false;
+  if (prev.isPinned !== next.isPinned) return false;
+  if (prev.isEdited !== next.isEdited) return false;
+  if (prev.isDeleted !== next.isDeleted) return false;
+  if (prev.isPlaying !== next.isPlaying) return false;
+  if (prev.reactions?.length !== next.reactions?.length) return false;
+  
+  // Jika ada perubahan dalam string reaksi (emoji/count), render ulang
+  if (JSON.stringify(prev.reactions) !== JSON.stringify(next.reactions)) return false;
+  
+  return true; // Props dianggap sama (skip render)
+});
 
 const styles = StyleSheet.create({
   outerContainer: {

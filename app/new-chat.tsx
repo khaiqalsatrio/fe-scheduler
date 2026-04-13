@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, FlatList, Platform, StatusBar, ActivityIndicator, Image, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, FlatList, Platform, StatusBar, ActivityIndicator, Image, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Search, User, Users, UserPlus, X, CheckCircle2 } from 'lucide-react-native';
-import * as SecureStore from 'expo-secure-store';
+import ChatService from '../services/chatService';
 
 type UserData = {
   id: string;
@@ -27,38 +27,28 @@ export default function NewChatScreen() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      if (!token) return;
+      const data = await ChatService.searchUsers(searchQuery);
       
-      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/users/recipients?limit=100&page=1', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      // Mocking additional data tags for design
+      const enhancedData = data.map((item: any, index: number) => ({
+        ...item,
+        instansi: index % 3 === 0 ? 'Telkom' : index % 3 === 1 ? 'Bukalapak' : 'Shopee',
+        tag: index === 0 ? 'Speaker' : index === 2 ? 'Mentor' : index === 4 || index === 8 ? 'Speaker' : null
+      }));
+      
+      setUsers(enhancedData);
 
-      const jsonResp = await response.json();
-      if (response.ok) {
-        const data = Array.isArray(jsonResp.data) ? jsonResp.data : (Array.isArray(jsonResp) ? jsonResp : []);
-        
-        // Mocking additional data tags for design
-        const enhancedData = data.map((item: any, index: number) => ({
-          ...item,
-          instansi: index % 3 === 0 ? 'Telkom' : index % 3 === 1 ? 'Bukalapak' : 'Shopee',
-          tag: index === 0 ? 'Speaker' : index === 2 ? 'Mentor' : index === 4 || index === 8 ? 'Speaker' : null
-        }));
-        
-        setUsers(enhancedData);
-
-        // EXTRACTION: Ambil kategori unik dari position dan tags
-        const roles = enhancedData.map((u: any) => u.position).filter(Boolean);
-        const tags = enhancedData.map((u: any) => u.tag).filter(Boolean);
-        const allPossible = Array.from(new Set(['Semua', ...tags, ...roles]));
-        
-        setCategories(allPossible);
-      }
+      // EXTRACTION: Ambil kategori unik dari position dan tags
+      const roles = enhancedData.map((u: any) => u.position).filter(Boolean);
+      const tags = enhancedData.map((u: any) => u.tag).filter(Boolean);
+      const allPossible = Array.from(new Set(['Semua', ...tags, ...roles]));
+      
+      setCategories(allPossible);
     } catch (error) {
       console.warn('Error fetching users:', error);
     } finally {
@@ -83,27 +73,15 @@ export default function NewChatScreen() {
       // Single Chat (DM)
       setIsCreatingChat(true);
       try {
-        const token = await SecureStore.getItemAsync('user_token');
-        const formData = new FormData();
-        formData.append('type', 'dm');
-        formData.append('participantIds', selectedUserIds[0]);
-
-        const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData,
+        const data = await ChatService.createConversation('dm', null, selectedUserIds[0]);
+        const selectedUser = users.find(u => u.id === selectedUserIds[0]);
+        router.push({
+          pathname: '/chat/[id]',
+          params: { id: data.id, name: selectedUser?.name || 'Chat' }
         });
-
-        const data = await response.json();
-        if (response.ok) {
-          const selectedUser = users.find(u => u.id === selectedUserIds[0]);
-          router.push({
-            pathname: '/chat/[id]',
-            params: { id: data.id, name: selectedUser?.name || 'Chat' }
-          });
-        }
-      } catch (error) {
+      } catch (error: any) {
         console.warn('Error starting DM:', error);
+        Alert.alert('Gagal', error.response?.data?.message || 'Gagal memulai chat');
       } finally {
         setIsCreatingChat(false);
       }

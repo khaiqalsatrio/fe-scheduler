@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image, Platform, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Send, CheckCircle2, Circle, User } from 'lucide-react-native';
-import * as SecureStore from 'expo-secure-store';
+import ChatService from '../services/chatService';
 
 export default function ForwardSelectScreen() {
   const router = useRouter();
@@ -19,14 +19,10 @@ export default function ForwardSelectScreen() {
   const fetchConversations = async () => {
     setIsLoading(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setConversations(Array.isArray(data) ? data : data.data || []);
-      }
+      const data = await ChatService.getConversations();
+      // UI expects raw DTO for forward, but we can reuse mapped data or raw
+      // Let's use getConversations but make sure it has what we need
+      setConversations(data);
     } catch (error) {
       console.error('Fetch conversations error:', error);
     } finally {
@@ -45,30 +41,16 @@ export default function ForwardSelectScreen() {
   };
 
   const handleForward = async () => {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0 || !messageId) return;
     
     setIsSending(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      const response = await fetch(`https://dev-ows-api.telkom-digital.id/v1/messages/${messageId}/forward`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          conversationIds: Array.from(selectedIds)
-        })
-      });
-
-      if (response.ok) {
-        router.back();
-      } else {
-        const errorData = await response.json();
-        Alert.alert('Gagal', errorData.message || 'Gagal meneruskan pesan');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Terjadi kesalahan saat meneruskan pesan');
+      await ChatService.forwardMessage(messageId as string, Array.from(selectedIds));
+      router.back();
+    } catch (error: any) {
+      console.error('Forward error:', error);
+      const msg = error.response?.data?.message || 'Gagal meneruskan pesan';
+      Alert.alert('Gagal', msg);
     } finally {
       setIsSending(false);
     }
@@ -76,8 +58,8 @@ export default function ForwardSelectScreen() {
 
   const renderItem = ({ item }: { item: any }) => {
     const isSelected = selectedIds.has(item.id);
-    const displayName = item.title || item.recipient?.name || 'User';
-    const avatar = item.photo_url || item.recipient?.avatar;
+    const displayName = item.name;
+    const avatar = item.avatar;
 
     return (
       <TouchableOpacity 
@@ -96,7 +78,7 @@ export default function ForwardSelectScreen() {
         </View>
         <View style={styles.chatInfo}>
           <Text style={styles.chatName}>{displayName}</Text>
-          <Text style={styles.chatType}>{item.type === 'group' ? 'Grup' : 'Personal'}</Text>
+          <Text style={styles.chatType}>{item.isGroup ? 'Grup' : 'Personal'}</Text>
         </View>
         <View style={styles.checkIcon}>
           {isSelected ? (

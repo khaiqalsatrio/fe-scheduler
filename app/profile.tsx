@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { Buffer } from 'buffer';
 import { X, User, CreditCard, Bell, History, LogOut, ChevronRight } from 'lucide-react-native';
+import AuthService from '../services/authService';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -20,34 +19,20 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      try {
-        const token = await SecureStore.getItemAsync('user_token');
-        if (token) {
-          setIsLoggedIn(true);
-          const payloadStr = token.split('.')[1];
-          const payloadObj = JSON.parse(Buffer.from(payloadStr, 'base64').toString('utf8'));
-
-          setUserData({
-            name: payloadObj.name || payloadObj.username || 'Pengguna',
-            email: payloadObj.email || 'user@example.com',
-            position: payloadObj.position || payloadObj.role || 'Member',
-            avatar: payloadObj.avatar || payloadObj.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
-            nik: payloadObj.nik || '',
-            username: payloadObj.username || ''
-          });
-        } else {
-          setIsLoggedIn(false);
-          setUserData({
-            name: 'ACOOUNT',
-            email: 'Masuk untuk sinkronisasi data',
-            position: 'guest',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
-            nik: '',
-            username: ''
-          });
-        }
-      } catch (e) {
-        console.error('Failed to parse token in profile:', e);
+      const user = await AuthService.getCurrentUser();
+      if (user) {
+        setIsLoggedIn(true);
+        setUserData(user);
+      } else {
+        setIsLoggedIn(false);
+        setUserData({
+          name: 'ACCOUNT',
+          email: 'Masuk untuk sinkronisasi data',
+          position: 'guest',
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
+          nik: '',
+          username: ''
+        });
       }
     };
     fetchUser();
@@ -59,8 +44,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
-      await SecureStore.deleteItemAsync('user_token');
-      // Navigate back to the onboarding/root
+      await AuthService.logout();
       router.replace('/');
     } catch (e) {
       console.error('Logout error:', e);

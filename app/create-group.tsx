@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, ScrollView, Platform, StatusBar, ActivityIndicator, Alert, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Users, Camera, User } from 'lucide-react-native';
-import * as SecureStore from 'expo-secure-store';
+import ChatService from '../services/chatService';
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -25,33 +25,21 @@ export default function CreateGroupScreen() {
 
     setIsCreating(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      if (!token) return;
-
       const participantIds = participants.map((p: any) => p.id).join(',');
-      const formData = new FormData();
-      formData.append('type', 'group');
-      formData.append('title', groupTitle.trim());
-      formData.append('participantIds', participantIds);
+      const data = await ChatService.createConversation('group', groupTitle.trim(), participantIds);
 
-      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData,
-      });
-
-      const data = await response.json();
-      if (response.ok) {
+      if (data.id) {
         router.push({
           pathname: '/chat/[id]',
           params: { id: data.id, name: groupTitle.trim() }
         });
       } else {
-        Alert.alert('Gagal', data.message || 'Gagal membuat grup');
+        Alert.alert('Gagal', 'Gagal membuat grup');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating group:', error);
-      Alert.alert('Error', 'Terjadi kesalahan saat membuat grup');
+      const msg = error.response?.data?.message || 'Terjadi kesalahan saat membuat grup';
+      Alert.alert('Error', msg);
     } finally {
       setIsCreating(false);
     }

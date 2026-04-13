@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, Imag
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import AuthService from '../../services/authService';
 
 const SLIDE_DATA = [
   {
@@ -133,33 +134,16 @@ export default function OnboardingScreen() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          username: email,
-          password: password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        const token = data.token || data.access_token || data?.data?.token;
-        if (token) {
-          await SecureStore.setItemAsync('user_token', token);
-          router.replace('/(tabs)/chats');
-        } else {
-          Alert.alert('Sukses Login', 'Namun tidak mendapatkan token dari API');
-        }
+      const data = await AuthService.login(email, password);
+      
+      if (data.token) {
+        router.replace('/(tabs)/chats');
       } else {
         Alert.alert('Login Gagal', data.message || 'Harap periksa kembali kredensial Anda.');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Gagal menyambung ke server.');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Gagal menyambung ke server.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -3,23 +3,13 @@ import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextI
 import { useRouter } from 'expo-router';
 import { MoreVertical, Search, MessageSquarePlus, Trash2, ArrowLeft, X } from 'lucide-react-native';
 import { ChatItem } from '../../components/ChatItem';
-import * as SecureStore from 'expo-secure-store';
+import { ChatListItem } from '../../types/chat';
+import { ChatService } from '../../services/chatService';
 import { useFocusEffect } from '@react-navigation/native';
-
-type ChatData = {
-  id: string;
-  name: string;
-  lastMessage: string;
-  time: string;
-  unreadCount: number;
-  isOnline?: boolean;
-  isGroup?: boolean;
-  avatar?: string;
-};
 
 export default function ChatsScreen() {
   const router = useRouter();
-  const [chats, setChats] = useState<ChatData[]>([]);
+  const [chats, setChats] = useState<ChatListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'groups'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,17 +38,8 @@ export default function ChatsScreen() {
   const handleGlobalSearch = async (query: string) => {
     setIsSearching(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      const response = await fetch(`https://dev-ows-api.telkom-digital.id/v1/messages/search/global?q=${encodeURIComponent(query)}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      console.log('Global Search Result:', data);
-      if (response.ok) {
-        setSearchResults(Array.isArray(data) ? data : data.data || []);
-      }
+      const results = await ChatService.globalSearch(query);
+      setSearchResults(results);
     } catch (error) {
       console.warn('Search search error:', error);
     } finally {
@@ -69,46 +50,8 @@ export default function ChatsScreen() {
   const fetchChatsFromBE = async () => {
     setIsLoading(true);
     try {
-      const token = await SecureStore.getItemAsync('user_token');
-      if (!token) {
-        console.log('User belum login / tidak ada token');
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch('https://dev-ows-api.telkom-digital.id/v1/conversations', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const jsonResp = await response.json();
-      console.log('Raw Conversations Result:', jsonResp);
-
-      if (response.ok) {
-        // API docs: jsonResp adalah Array langsung [...]
-        const data = Array.isArray(jsonResp) ? jsonResp : (jsonResp.data || []);
-
-        const formattedData: ChatData[] = data
-          .map((item: any) => ({
-            id: item.id.toString(),
-            name: item.title || item.recipient?.name || "User",
-            lastMessage: item.last_message?.content || "",
-            time: item.last_message?.created_at ? new Date(item.last_message.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) : "Baru saja",
-            unreadCount: parseInt(item.unread_count?.toString() || '0', 10),
-            isOnline: item.is_online || false,
-            avatar: item.photo_url || item.recipient?.avatar,
-            isGroup: item.type === 'group'
-          }))
-          .filter((chat: ChatData) => chat.lastMessage !== "" || chat.unreadCount > 0);
-          
-        setChats(formattedData);
-
-      } else {
-        console.warn('Gagal memuat list chat:', jsonResp.message);
-      }
+      const formattedData = await ChatService.getConversations();
+      setChats(formattedData);
     } catch (error) {
       console.warn('Error saat fetch chat:', error);
     } finally {
@@ -129,14 +72,7 @@ export default function ChatsScreen() {
           onPress: async () => {
             setIsLoading(true);
             try {
-              const token = await SecureStore.getItemAsync('user_token');
-              // Hapus semua chat terpilih secara berurutan
-              for (const id of selectedChatIds) {
-                await fetch(`https://dev-ows-api.telkom-digital.id/v1/conversations/${id}`, {
-                  method: 'DELETE',
-                  headers: { 'Authorization': `Bearer ${token}` }
-                });
-              }
+              await ChatService.deleteConversations(selectedChatIds);
               setSelectedChatIds([]);
               fetchChatsFromBE();
             } catch (error) {
