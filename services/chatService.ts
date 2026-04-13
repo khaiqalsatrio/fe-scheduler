@@ -9,7 +9,7 @@ export const ChatService = {
    * Fetch all conversations for the current user
    */
   async getConversations(): Promise<ChatListItem[]> {
-    const response = await apiClient.get<Conversation[]>('/conversations');
+    const response = await apiClient.get<Conversation[]>('/conversations?includeArchived=true');
     const data = response.data;
     
     // Clean Architecture: Map DTO (Data Transfer Object) to UI Domain Model
@@ -17,7 +17,17 @@ export const ChatService = {
       .map((item) => ({
         id: item.id.toString(),
         name: item.title || item.recipient?.name || "User",
-        lastMessage: item.last_message?.content || (item.last_message ? `[${item.last_message.type}]` : ""),
+        lastMessage: item.last_message?.content || (item.last_message ? (() => {
+          switch (item.last_message.type) {
+            case 'image': return '📷 Foto';
+            case 'video': return '🎥 Video';
+            case 'voice': return '🎤 Pesan suara';
+            case 'file': return '📄 Dokumen';
+            case 'sticker': return 'Stiker';
+            case 'location': return '📍 Lokasi';
+            default: return `[${item.last_message.type}]`;
+          }
+        })() : ""),
         time: item.last_message?.created_at 
           ? new Date(item.last_message.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) 
           : "Baru saja",
@@ -25,16 +35,19 @@ export const ChatService = {
         isOnline: item.is_online || false,
         avatar: item.photo_url || item.recipient?.avatar || undefined,
         isGroup: item.type === 'group',
-        isPinned: !!item.pinned_at
+        isPinned: !!item.pinned_at,
+        isMuted: !!item.is_muted,
+        isArchived: !!item.is_archived
       }))
-      .filter((chat) => chat.lastMessage !== "" || chat.unreadCount > 0 || chat.isPinned);
+      .filter((chat) => chat.lastMessage !== "" || chat.unreadCount > 0 || chat.isPinned || chat.isArchived);
   },
 
   /**
-   * Delete a single conversation
+   * Delete a single conversation (Reset to a new one)
    */
-  async deleteConversation(id: string): Promise<void> {
-    await apiClient.delete(`/conversations/${id}`);
+  async deleteConversation(id: string): Promise<Conversation> {
+    const response = await apiClient.delete<Conversation>(`/conversations/${id}`);
+    return response.data;
   },
 
   /**
@@ -43,6 +56,81 @@ export const ChatService = {
   async deleteConversations(ids: string[]): Promise<void> {
     // In Clean Architecture, we handle complexity like bulk deletion here, not in the Screen
     await Promise.all(ids.map(id => this.deleteConversation(id)));
+  },
+
+  /**
+   * Mute or unmute a conversation
+   */
+  async muteConversation(id: string, isMuted: boolean): Promise<any> {
+    const response = await apiClient.put(`/conversations/${id}/mute`, { isMuted });
+    return response.data;
+  },
+
+  /**
+   * Mute multiple conversations (Bulk)
+   */
+  async muteConversations(ids: string[], isMuted: boolean): Promise<void> {
+    await Promise.all(ids.map(id => this.muteConversation(id, isMuted)));
+  },
+
+  /**
+   * Archive or unarchive a conversation
+   */
+  async archiveConversation(id: string, isArchived: boolean): Promise<any> {
+    const response = await apiClient.put(`/conversations/${id}/archive`, { isArchived });
+    return response.data;
+  },
+
+  /**
+   * Archive multiple conversations (Bulk)
+   */
+  async archiveConversations(ids: string[], isArchived: boolean): Promise<void> {
+    await Promise.all(ids.map(id => this.archiveConversation(id, isArchived)));
+  },
+
+  /**
+   * Pin or unpin a conversation
+   */
+  async pinConversation(id: string, isPinned: boolean): Promise<any> {
+    const response = await apiClient.put(`/conversations/${id}/pin`, { isPinned });
+    return response.data;
+  },
+
+  /**
+   * Pin multiple conversations (Bulk)
+   */
+  async pinConversations(ids: string[], isPinned: boolean): Promise<void> {
+    await Promise.all(ids.map(id => this.pinConversation(id, isPinned)));
+  },
+
+  /**
+   * Fetch all members of a group/conversation
+   */
+  async getGroupMembers(id: string): Promise<any[]> {
+    const response = await apiClient.get(`/conversations/${id}/members`);
+    return response.data;
+  },
+
+  /**
+   * Update conversation info (title, avatar)
+   */
+  async updateGroupInfo(id: string, data: { title?: string, avatarUrl?: string }): Promise<any> {
+    const response = await apiClient.patch(`/conversations/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Add a member to a group
+   */
+  async addMember(id: string, userId: string): Promise<void> {
+    await apiClient.post(`/conversations/${id}/members`, { userId });
+  },
+
+  /**
+   * Remove a member or leave group
+   */
+  async removeMember(id: string, userId: string): Promise<void> {
+    await apiClient.delete(`/conversations/${id}/members/${userId}`);
   },
 
   /**

@@ -9,6 +9,8 @@ export interface AgendaItem {
   location?: string;
   speaker?: string;
   notes?: string;
+  start_at?: string;
+  end_at?: string;
   created_at?: string;
   updated_at?: string;
 }

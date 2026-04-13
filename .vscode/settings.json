@@ -3,10 +3,12 @@
     "java.compile.nullAnalysis.mode": "automatic",
     "java.import.exclusions": [
         "**/node_modules/**",
+        "**/node_modules/@react-native-google-signin/google-signin/android/**",
         "**/.git/**"
     ],
     "gradle.import.exclusions": [
-        "**/node_modules/**"
+        "**/node_modules/**",
+        "**/node_modules/@react-native-google-signin/google-signin/android/**"
     ],
     "files.exclude": {
         "**/.settings": true,

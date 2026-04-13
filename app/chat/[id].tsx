@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator, TextInput, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator, TextInput, ImageBackground, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pin, X, ChevronLeft, User, Users, Search, MoreVertical, Lock, Sparkles, MessageCircle, FileText, Presentation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { MessageActionMenu } from '../../components/MessageActionMenu';
 import { useChatSocket } from '../../hooks/useChatSocket';
 import { useChatMessages } from '../../hooks/useChatMessages';
 import { MessageService } from '../../services/messageService';
+import { ChatService } from '../../services/chatService';
 import { Message } from '../../types/chat';
 
 export default function ChatDetailScreen() {
@@ -26,6 +27,10 @@ export default function ChatDetailScreen() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isAIActionsVisible, setIsAIActionsVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isMenuModalVisible, setIsMenuModalVisible] = useState(false);
+  const deleteModalAnim = useRef(new Animated.Value(0)).current;
+  const menuModalAnim = useRef(new Animated.Value(0)).current;
   const aiMenuAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -73,6 +78,44 @@ export default function ChatDetailScreen() {
       ])
     ).start();
   }, [pulseAnim]);
+
+  useEffect(() => {
+    if (isDeleteModalVisible) {
+      deleteModalAnim.setValue(0);
+      Animated.spring(deleteModalAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 12,
+        speed: 10
+      }).start();
+    } else {
+      Animated.spring(deleteModalAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 0,
+        speed: 10
+      }).start();
+    }
+  }, [isDeleteModalVisible]);
+
+  useEffect(() => {
+    if (isMenuModalVisible) {
+      menuModalAnim.setValue(0);
+      Animated.spring(menuModalAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 12,
+        speed: 10
+      }).start();
+    } else {
+      Animated.spring(menuModalAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 0,
+        speed: 10
+      }).start();
+    }
+  }, [isMenuModalVisible]);
 
   useEffect(() => {
     Animated.timing(aiMenuAnim, {
@@ -206,6 +249,37 @@ export default function ChatDetailScreen() {
     }
     Alert.alert('Hapus Pesan?', 'Pesan yang dihapus tidak dapat dikembalikan.', options);
   };
+  
+  const handleResetChat = () => {
+    Alert.alert(
+      'Reset Percakapan?',
+      'Seluruh riwayat pesan akan dihapus secara permanen bagi semua orang. Tindakan ini tidak dapat dibatalkan.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        { 
+          text: 'Reset Sekarang', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              const newConv = await ChatService.deleteConversation(id as string);
+              // Navigasi ke ID chat baru
+              router.replace({
+                pathname: `/chat/${newConv.id}` as any,
+                params: { name: name as string }
+              });
+            } catch (error) {
+              console.error("Reset Error:", error);
+              Alert.alert('Gagal Reset', 'Gagal mereset percakapan. Silakan coba lagi.');
+            }
+          } 
+        }
+      ]
+    );
+  };
+
+  const onHeaderMenuPress = () => {
+    setIsMenuModalVisible(true);
+  };
 
   const jumpToMessage = (messageId: string) => {
     const index = messages.findIndex(m => m.id === messageId);
@@ -285,20 +359,26 @@ export default function ChatDetailScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <ChevronLeft color="#22C55E" size={28} />
             </TouchableOpacity>
-            <View style={styles.headerInfo}>
+            <TouchableOpacity 
+              style={styles.headerInfo} 
+              disabled={chatType !== 'group'} 
+              onPress={() => router.push({ pathname: '/group-detail/[id]' as any, params: { id: id as string, title: name as string } })}
+            >
               <View style={[styles.headerAvatar, chatType === 'group' && { backgroundColor: '#E0EEFF' }]}>
                 {chatType === 'group' ? <Users color="#3B82F6" size={22} /> : <User color="#999" size={22} />}
               </View>
               <View style={styles.headerTextContainer}>
                 <Text style={styles.headerTitle} numberOfLines={1}>{name as string || 'Chat'}</Text>
-                <Text style={styles.headerSubtitle}>{chatType === 'group' ? `${memberCount} Member` : 'Last seen recently'}</Text>
+                <Text style={styles.headerSubtitle}>{chatType === 'group' ? `${memberCount} Anggota` : 'Last seen recently'}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
             <View style={styles.headerActions}>
               <TouchableOpacity style={styles.headerButton} onPress={() => setIsSearchingInside(true)}>
                 <Search color="#555" size={22} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerButton}><MoreVertical color="#555" size={22} /></TouchableOpacity>
+              <TouchableOpacity style={styles.headerButton} onPress={onHeaderMenuPress}>
+                <MoreVertical color="#555" size={22} />
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -453,6 +533,107 @@ export default function ChatDetailScreen() {
         onDelete={onActionDelete}
         onReact={(emoji) => { if (selectedMessage) handleReact(selectedMessage.id, emoji); setIsMenuVisible(false); }}
       />
+
+      {/* Delete Confirmation Modal (Native Mockup Design) */}
+      <Modal
+        visible={isDeleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsDeleteModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsDeleteModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <Animated.View style={[
+              styles.modalContent,
+              { 
+                opacity: deleteModalAnim,
+                transform: [{ scale: deleteModalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
+              }
+            ]}>
+              <TouchableWithoutFeedback>
+                <View>
+                  <Text style={styles.modalTitle}>Hapus chat dengan {name as string}?</Text>
+                  <Text style={styles.modalMessage}>Pesan akan dihapus dari semua perangkat.</Text>
+                  
+                  <View style={styles.modalActionContainer}>
+                    <TouchableOpacity 
+                      onPress={() => setIsDeleteModalVisible(false)}
+                      style={styles.modalCancelButton}
+                    >
+                      <Text style={styles.modalCancelText}>Batal</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      onPress={async () => {
+                        setIsDeleteModalVisible(false);
+                        try {
+                          const newConv = await ChatService.deleteConversation(id as string);
+                          router.replace({
+                            pathname: `/chat/${newConv.id}` as any,
+                            params: { name: name as string }
+                          });
+                        } catch (error) {
+                          console.error("Reset Error:", error);
+                          Alert.alert('Gagal Hapus', 'Gagal menghapus percakapan. Silakan coba lagi.');
+                        }
+                      }}
+                      style={styles.modalDeleteButton}
+                    >
+                      <Text style={styles.modalDeleteText}>Hapus</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Options Menu Modal (Mockup Style with Animation) */}
+      <Modal
+        visible={isMenuModalVisible}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setIsMenuModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsMenuModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <Animated.View style={[
+              styles.modalContent,
+              { 
+                opacity: menuModalAnim,
+                transform: [{ scale: menuModalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
+              }
+            ]}>
+              <TouchableWithoutFeedback>
+                <View>
+                  <Text style={styles.modalTitle}>Opsi Percakapan</Text>
+                  <Text style={styles.modalMessage}>Pilih tindakan untuk percakapan ini.</Text>
+                  
+                  <View style={[styles.modalActionContainer, { marginTop: 8 }]}>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setIsMenuModalVisible(false);
+                        setTimeout(() => setIsDeleteModalVisible(true), 300);
+                      }}
+                      style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                    >
+                      <Text style={[styles.modalCancelText, { color: '#00A884', fontSize: 13 }]}>HAPUS CHAT</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      onPress={() => setIsMenuModalVisible(false)}
+                      style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                    >
+                      <Text style={[styles.modalCancelText, { color: '#00A884', fontSize: 13 }]}>BATAL</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -508,4 +689,65 @@ const styles = StyleSheet.create({
   aiThinkingContainer: { paddingHorizontal: 15, paddingVertical: 10, alignItems: 'flex-start' },
   aiThinkingBubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.8)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#F3E8FF' },
   aiThinkingText: { fontSize: 13, color: '#6B21A8', fontStyle: 'italic', fontWeight: '500' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 12
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 24,
+    lineHeight: 20
+  },
+  modalActionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center'
+  },
+  modalCancelButton: {
+    marginRight: 24,
+    paddingVertical: 8
+  },
+  modalCancelText: {
+    fontSize: 14,
+    color: '#00A884',
+    fontWeight: '600'
+  },
+  modalDeleteButton: {
+    backgroundColor: '#E91E63', 
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1
+  },
+  modalDeleteText: {
+    fontSize: 14,
+    color: '#FFF',
+    fontWeight: '700'
+  },
 });

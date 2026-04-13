@@ -105,4 +105,6 @@ export interface ChatListItem {
   isGroup?: boolean;
   avatar?: string;
   isPinned?: boolean;
+  isMuted?: boolean;
+  isArchived?: boolean;
 }

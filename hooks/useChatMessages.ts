@@ -24,6 +24,7 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [chatType, setChatType] = useState<'dm' | 'group'>('dm');
   const [memberCount, setMemberCount] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
 
   // --- Helpers ---
   const getChatDateLabel = useCallback((dateStr: string) => {
@@ -148,6 +149,7 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
       // Handle Group Info
       if (conversationInfo) {
         setChatType(conversationInfo.type);
+        setIsMuted(!!conversationInfo.is_muted);
         if (conversationInfo.type === 'group') {
           const members = await MessageService.getMembers(conversationId);
           setMemberCount(members.length);
@@ -255,6 +257,22 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
       setMessages(prev => prev.map(m => (m.id === data.messageId || m.id === data.clientMessageId) ? { ...m, isDeleted: true } : m));
     });
 
+    socket.on('conversation.deleted', (data: any) => {
+      if (data.conversationId === conversationId) {
+        Alert.alert(
+          'Chat Dihapus',
+          'Percakapan ini telah di-reset oleh admin/sistem.',
+          [{ text: 'OK' }]
+        );
+      }
+    });
+
+    socket.on('conversation.muted', (data: any) => {
+      if (data.conversationId === conversationId || data.conversation_id === conversationId) {
+        setIsMuted(!!data.isMuted || !!data.is_muted);
+      }
+    });
+
     socket.on('ai.thinking', (data: any) => {
       if (data.conversationId === conversationId) setIsAiThinking(true);
     });
@@ -271,6 +289,8 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
       socket.off('message.pinned');
       socket.off('message.updated');
       socket.off('message.deleted');
+      socket.off('conversation.deleted');
+      socket.off('conversation.muted');
       socket.off('ai.thinking');
       socket.off('ai.thinking.stop');
     };
@@ -377,6 +397,26 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
     }
   }, [myId]);
 
+  const handleMute = useCallback(async (isMuted: boolean) => {
+    const oldStatus = isMuted;
+    setIsMuted(isMuted);
+    try {
+      // Import dynamic or use ChatService from global (handled via types/service)
+      // Since ChatService is not in hooks context properly, we'll implement the logic or use socket
+      if (socket) {
+        socket.emit('conversation.mute', { conversationId, isMuted }, (res: any) => {
+          if (!res?.ok) {
+            setIsMuted(!isMuted);
+            Alert.alert('Gagal', 'Terjadi kesalahan saat membisukan percakapan.');
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('useChatMessages: Failed to mute', error);
+      setIsMuted(!isMuted);
+    }
+  }, [socket, conversationId]);
+
   return {
     messages,
     setMessages,
@@ -395,6 +435,8 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
     handleDeleteLocal,
     handleDeleteForEveryone,
     handleReact,
+    handleMute,
+    isMuted,
     myId,
   };
 };

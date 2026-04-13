@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextInput, Platform, StatusBar, Image, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, TextInput, Platform, StatusBar, Image, ActivityIndicator, Alert, Modal, Animated, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { MoreVertical, Search, MessageSquarePlus, Trash2, ArrowLeft, X } from 'lucide-react-native';
+import { MoreVertical, Search, MessageSquarePlus, Trash2, ArrowLeft, X, BellOff, Bell, Archive, Pin } from 'lucide-react-native';
 import { ChatItem } from '../../components/ChatItem';
 import { ChatListItem } from '../../types/chat';
 import { ChatService } from '../../services/chatService';
@@ -13,9 +13,18 @@ export default function ChatsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'groups'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<{
+    conversations: ChatListItem[];
+    messages: any[];
+  }>({ conversations: [], messages: [] });
   const [isSearching, setIsSearching] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isMuteModalVisible, setIsMuteModalVisible] = useState(false);
+  const [muteDuration, setMuteDuration] = useState<'8h' | '1w' | 'always'>('always');
+  
+  const deleteModalAnim = useRef(new Animated.Value(0)).current;
+  const muteModalAnim = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -23,12 +32,51 @@ export default function ChatsScreen() {
     }, [])
   );
 
+  // --- Effects ---
+  useEffect(() => {
+    if (isDeleteModalVisible) {
+      deleteModalAnim.setValue(0);
+      Animated.spring(deleteModalAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 12,
+        speed: 10
+      }).start();
+    } else {
+      Animated.spring(deleteModalAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 0,
+        speed: 10
+      }).start();
+    }
+  }, [isDeleteModalVisible]);
+
+  useEffect(() => {
+    if (isMuteModalVisible) {
+      muteModalAnim.setValue(0);
+      Animated.spring(muteModalAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        bounciness: 12,
+        speed: 10
+      }).start();
+    } else {
+      Animated.spring(muteModalAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 0,
+        speed: 10
+      }).start();
+    }
+  }, [isMuteModalVisible]);
+
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery.trim().length > 0) {
         handleGlobalSearch(searchQuery);
       } else {
-        setSearchResults([]);
+        setSearchResults({ conversations: [], messages: [] });
       }
     }, 500);
 
@@ -38,10 +86,34 @@ export default function ChatsScreen() {
   const handleGlobalSearch = async (query: string) => {
     setIsSearching(true);
     try {
-      const results = await ChatService.globalSearch(query);
-      setSearchResults(results);
+      // 1. Filter Lokal (Instant)
+      const localResults = chats.filter(chat => 
+        chat.name.toLowerCase().includes(query.toLowerCase())
+      );
+
+      // 2. Cari Akun Baru (User Service)
+      const userResults = await ChatService.searchUsers(query);
+      const mappedUserResults: ChatListItem[] = userResults
+        .filter(u => !localResults.some(c => c.id === u.id)) // Hindari duplikat jika user sudah ada di chat list
+        .map(u => ({
+          id: u.id,
+          name: u.name || u.username || 'User',
+          lastMessage: '',
+          time: '',
+          avatar: u.avatar || undefined,
+          isGroup: false,
+          unreadCount: 0
+        }));
+
+      // 3. Cari Riwayat Pesan
+      const messageResults = await ChatService.globalSearch(query);
+
+      setSearchResults({
+        conversations: [...localResults, ...mappedUserResults],
+        messages: messageResults
+      });
     } catch (error) {
-      console.warn('Search search error:', error);
+      console.warn('Unified search error:', error);
     } finally {
       setIsSearching(false);
     }
@@ -59,31 +131,8 @@ export default function ChatsScreen() {
     }
   };
 
-  const handleDeleteConversation = async () => {
-    const count = selectedChatIds.length;
-    Alert.alert(
-      'Hapus Percakapan',
-      `Apakah Anda yakin ingin menghapus ${count} percakapan terpilih? Semua riwayat pesan akan dikosongkan secara fisik.`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        { 
-          text: 'Hapus', 
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoading(true);
-            try {
-              await ChatService.deleteConversations(selectedChatIds);
-              setSelectedChatIds([]);
-              fetchChatsFromBE();
-            } catch (error) {
-              Alert.alert('Error', 'Terjadi kesalahan saat menghapus beberapa percakapan.');
-            } finally {
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
-    );
+  const handleDeleteConversation = () => {
+    setIsDeleteModalVisible(true);
   };
 
   const handleChatPress = (id: string, name: string) => {
@@ -111,11 +160,25 @@ export default function ChatsScreen() {
     });
   };
 
-  const filteredChats = chats.filter(chat => {
-    if (activeFilter === 'unread') return chat.unreadCount > 0;
-    if (activeFilter === 'groups') return chat.isGroup;
-    return true;
-  });
+  const { archivedCount, mainChats } = React.useMemo(() => {
+    const filtered = chats.filter(chat => {
+      if (activeFilter === 'unread') return chat.unreadCount > 0;
+      if (activeFilter === 'groups') return chat.isGroup;
+      return true;
+    });
+
+    return {
+      archivedCount: chats.filter(c => c.isArchived).length,
+      mainChats: filtered
+        .filter(c => !c.isArchived)
+        .sort((a, b) => {
+          // Sort by Pinned First
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return 0; // Maintain original order (assumed from API as latest first)
+        })
+    };
+  }, [chats, activeFilter]);
 
   return (
     <View style={styles.container}>
@@ -129,6 +192,77 @@ export default function ChatsScreen() {
               <Text style={styles.headerTitleSelected}>{selectedChatIds.length}</Text>
             </View>
             <View style={styles.headerIcons}>
+              <TouchableOpacity 
+                style={styles.iconButton} 
+                onPress={async () => {
+                  setIsLoading(true);
+                  try {
+                    const allPinned = chats.filter(c => selectedChatIds.includes(c.id)).every(c => c.isPinned);
+                    await ChatService.pinConversations(selectedChatIds, !allPinned);
+                    setSelectedChatIds([]);
+                    fetchChatsFromBE();
+                  } catch (error) {
+                    Alert.alert('Error', 'Gagal menyematkan percakapan.');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              >
+                <Pin 
+                  color="#FFF" 
+                  size={24} 
+                  style={{ transform: [{ rotate: '45deg' }] }}
+                  fill={chats.filter(c => selectedChatIds.includes(c.id)).every(c => c.isPinned) ? "#FFF" : "transparent"} 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.iconButton} 
+                onPress={() => {
+                  const anyUnmuted = chats.filter(c => selectedChatIds.includes(c.id)).some(c => !c.isMuted);
+                  if (anyUnmuted) {
+                    setIsMuteModalVisible(true);
+                  } else {
+                    // All are already muted, so UNMUTE directly
+                    (async () => {
+                      setIsLoading(true);
+                      try {
+                        await ChatService.muteConversations(selectedChatIds, false);
+                        setSelectedChatIds([]);
+                        fetchChatsFromBE();
+                      } catch (error) {
+                        Alert.alert('Error', 'Terjadi kesalahan saat mengaktifkan suara.');
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    })();
+                  }
+                }}
+              >
+                {chats.filter(c => selectedChatIds.includes(c.id)).every(c => c.isMuted) ? (
+                  <Bell color="#FFF" size={24} />
+                ) : (
+                  <BellOff color="#FFF" size={24} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.iconButton} 
+                onPress={async () => {
+                  setIsLoading(true);
+                  try {
+                    // Cek jika semua yang dipilih sudah diarsip, maka unarchive. Jika ada yang belum, maka archive.
+                    const allArchived = chats.filter(c => selectedChatIds.includes(c.id)).every(c => c.isArchived);
+                    await ChatService.archiveConversations(selectedChatIds, !allArchived);
+                    setSelectedChatIds([]);
+                    fetchChatsFromBE();
+                  } catch (error) {
+                    Alert.alert('Error', 'Gagal memproses arsip.');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              >
+                <Archive color="#FFF" size={24} />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.iconButton} onPress={handleDeleteConversation}>
                 <Trash2 color="#FFF" size={24} />
               </TouchableOpacity>
@@ -156,7 +290,7 @@ export default function ChatsScreen() {
         <View style={styles.searchInputContainer}>
           <Search color="#999" size={20} />
           <TextInput
-            placeholder="Search messages..."
+            placeholder="Search...."
             style={styles.searchInput}
             placeholderTextColor="#999"
             value={searchQuery}
@@ -191,42 +325,97 @@ export default function ChatsScreen() {
 
       {searchQuery.length > 0 ? (
         <FlatList
-          data={searchResults}
-          keyExtractor={(item) => item.id}
+          data={[
+            ...(searchResults.conversations.length > 0 ? [{ type: 'header', title: 'OBROLAN & KONTAK' }] : []),
+            ...searchResults.conversations.map(c => ({ ...c, type: 'conversation' })),
+            ...(searchResults.messages.length > 0 ? [{ type: 'header', title: 'PESAN' }] : []),
+            ...searchResults.messages.map(m => ({ ...m, type: 'message' }))
+          ]}
+          keyExtractor={(item, index) => item.id + index.toString()}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               {isSearching ? (
                 <ActivityIndicator color="#25D366" />
               ) : (
-                <Text style={styles.emptyText}>Tidak ada pesan ditemukan</Text>
+                <Text style={styles.emptyText}>Tidak ditemukan hasil untuk "{searchQuery}"</Text>
               )}
             </View>
           )}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.searchResultItem}
-              onPress={() => handleChatPress(item.conversation_id, item.conversation?.title || item.sender?.name || 'User')}
-              onLongPress={() => handleLongPress(item.conversation_id)}
-            >
-              <View style={[styles.searchResultHeader, selectedChatIds.includes(item.conversation_id) && { backgroundColor: '#E7F5FE' }]}>
-                 <Text style={styles.searchResultName}>{item.conversation?.title || item.sender?.name || item.conversation?.recipient?.name || 'User'}</Text>
-                 <Text style={styles.searchResultTime}>
-                   {new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                 </Text>
-              </View>
-              <Text style={styles.searchResultText} numberOfLines={2}>
-                {item.content}
-              </Text>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }: { item: any }) => {
+            if (item.type === 'header') {
+              return (
+                <View style={styles.searchCategoryHeader}>
+                  <Text style={styles.searchCategoryHeaderText}>{item.title}</Text>
+                </View>
+              );
+            }
+
+            if (item.type === 'conversation') {
+              return (
+                <ChatItem
+                  name={item.name}
+                  lastMessage={item.lastMessage}
+                  time={item.time}
+                  avatar={item.avatar}
+                  isGroup={item.isGroup}
+                  unreadCount={item.unreadCount}
+                  onPress={() => handleChatPress(item.id, item.name)}
+                  onLongPress={() => handleLongPress(item.id)}
+                  isSelected={selectedChatIds.includes(item.id)}
+                  isMuted={item.isMuted}
+                  isPinned={item.isPinned}
+                />
+              );
+            }
+
+            // Render Message Result
+            const conversationName = item.conversation?.title || item.sender?.name || 'User';
+            return (
+              <TouchableOpacity
+                style={styles.searchResultItem}
+                onPress={() => handleChatPress(item.conversation_id, conversationName)}
+              >
+                <View style={styles.searchResultHeader}>
+                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                     <Text style={styles.searchResultName}>{conversationName}</Text>
+                     {item.conversation?.type === 'group' && (
+                       <Text style={styles.groupBadge}>Grup</Text>
+                     )}
+                   </View>
+                   <Text style={styles.searchResultTime}>
+                     {new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' })}
+                   </Text>
+                </View>
+                <Text style={styles.searchResultText} numberOfLines={2}>
+                  {item.content}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
           contentContainerStyle={styles.listContent}
         />
       ) : (
         <FlatList
-          data={filteredChats}
+          data={mainChats}
           refreshing={isLoading}
           onRefresh={fetchChatsFromBE}
           keyExtractor={(item) => item.id}
+          extraData={chats} // Memastikan FlatList update saat dta chats berubah
+          ListHeaderComponent={archivedCount > 0 ? (
+            <TouchableOpacity 
+              style={styles.archivedHeader}
+              onPress={() => router.push('/archived')}
+              activeOpacity={0.7}
+            >
+              <Archive color="#868D95" size={20} style={styles.archivedIcon} />
+              <Text style={styles.archivedText}>Diarsipkan</Text>
+              {chats.filter(c => c.isArchived && c.unreadCount > 0).length > 0 && (
+                <Text style={styles.archivedCountText}>
+                  {chats.filter(c => c.isArchived && c.unreadCount > 0).reduce((acc, c) => acc + c.unreadCount, 0)}
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
           renderItem={({ item }) => (
             <ChatItem
               name={item.name}
@@ -239,6 +428,7 @@ export default function ChatsScreen() {
               onPress={() => handleChatPress(item.id, item.name)}
               onLongPress={() => handleLongPress(item.id)}
               isSelected={selectedChatIds.includes(item.id)}
+              isMuted={item.isMuted}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -259,6 +449,130 @@ export default function ChatsScreen() {
       >
         <MessageSquarePlus color="#FFF" size={26} />
       </TouchableOpacity>
+
+      {/* Delete Confirmation Modal (Aligned with Detail View) */}
+      <Modal
+        visible={isDeleteModalVisible}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setIsDeleteModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsDeleteModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <Animated.View style={[
+              styles.modalContent,
+              { 
+                opacity: deleteModalAnim,
+                transform: [{ scale: deleteModalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
+              }
+            ]}>
+              <TouchableWithoutFeedback>
+                <View>
+                  <Text style={styles.modalTitle}>Hapus Percakapan</Text>
+                  <Text style={styles.modalMessage}>Hapus percakapan terpilih secara permanen?</Text>
+                  
+                  <View style={styles.modalActionContainer}>
+                    <TouchableOpacity 
+                      onPress={() => setIsDeleteModalVisible(false)}
+                      style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                    >
+                      <Text style={styles.modalActionText}>BATAL</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      onPress={async () => {
+                        setIsDeleteModalVisible(false);
+                        setIsLoading(true);
+                        try {
+                          await ChatService.deleteConversations(selectedChatIds);
+                          setSelectedChatIds([]);
+                          fetchChatsFromBE();
+                        } catch (error) {
+                          Alert.alert('Error', 'Terjadi kesalahan saat menghapus percakapan.');
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      style={styles.modalDeleteButton}
+                    >
+                      <Text style={styles.modalDeleteText}>HAPUS</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Mute Options Modal (WhatsApp Style) */}
+      <Modal
+        visible={isMuteModalVisible}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setIsMuteModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsMuteModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <Animated.View style={[
+              styles.modalContent,
+              { 
+                opacity: muteModalAnim,
+                transform: [{ scale: muteModalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
+              }
+            ]}>
+              <TouchableWithoutFeedback>
+                <View>
+                  <Text style={styles.muteModalTitle}>Bisukan notifikasi untuk {selectedChatIds.length} chat?</Text>
+                  
+                  <TouchableOpacity style={styles.muteOption} onPress={() => setMuteDuration('8h')}>
+                    <View style={[styles.muteRadio, muteDuration === '8h' && styles.muteRadioActive]} />
+                    <Text style={styles.muteOptionText}>8 Jam</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.muteOption} onPress={() => setMuteDuration('1w')}>
+                    <View style={[styles.muteRadio, muteDuration === '1w' && styles.muteRadioActive]} />
+                    <Text style={styles.muteOptionText}>1 Minggu</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.muteOption} onPress={() => setMuteDuration('always')}>
+                    <View style={[styles.muteRadio, muteDuration === 'always' && styles.muteRadioActive]} />
+                    <Text style={styles.muteOptionText}>Selalu</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.modalActionContainer}>
+                    <TouchableOpacity 
+                      onPress={() => setIsMuteModalVisible(false)}
+                      style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+                    >
+                      <Text style={styles.modalActionText}>BATAL</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      onPress={async () => {
+                        setIsMuteModalVisible(false);
+                        setIsLoading(true);
+                        try {
+                          await ChatService.muteConversations(selectedChatIds, true);
+                          setSelectedChatIds([]);
+                          fetchChatsFromBE();
+                        } catch (error) {
+                          Alert.alert('Error', 'Terjadi kesalahan saat membisukan percakapan.');
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      style={{ paddingHorizontal: 16, paddingVertical: 10, marginLeft: 8 }}
+                    >
+                      <Text style={styles.modalActionText}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -426,5 +740,138 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  searchCategoryHeader: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: '#F7F7F7',
+  },
+  searchCategoryHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#666',
+    letterSpacing: 0.5
+  },
+  groupBadge: {
+    fontSize: 10,
+    backgroundColor: '#E7F5FE',
+    color: '#00A884',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+    fontWeight: '700'
+  },
+  archivedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
+  },
+  archivedIcon: {
+    marginRight: 20,
+    marginLeft: 5,
+  },
+  archivedText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111',
+    fontWeight: '500',
+  },
+  archivedCountText: {
+    fontSize: 12,
+    color: '#00A884',
+    fontWeight: '600',
+    backgroundColor: '#E7F5FE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 12
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 24,
+    lineHeight: 20
+  },
+  modalActionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center'
+  },
+  modalActionText: {
+    fontSize: 14,
+    color: '#00A884',
+    fontWeight: '700'
+  },
+  modalDeleteButton: {
+    backgroundColor: '#E91E63', // Red color from mockup
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginLeft: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1
+  },
+  modalDeleteText: {
+    fontSize: 14,
+    color: '#FFF',
+    fontWeight: '700'
+  },
+  muteModalTitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+    lineHeight: 22
+  },
+  muteOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  muteRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#999',
+    marginRight: 15,
+  },
+  muteRadioActive: {
+    borderColor: '#00A884',
+    borderWidth: 6,
+  },
+  muteOptionText: {
+    fontSize: 16,
+    color: '#000',
   },
 });

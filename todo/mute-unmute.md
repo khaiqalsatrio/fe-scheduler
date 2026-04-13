@@ -1,0 +1,21 @@
+# TODO: Fitur Mute/Unmute Percakapan
+
+- [x] Update Model & Service
+    - [x] Tambahkan `isMuted` ke `ChatListItem` di `types/chat.ts`
+    - [x] Implementasikan `muteConversation` & `muteConversations` di `chatService.ts`
+    - [x] Map field `is_muted` di `getConversations`
+- [x] Pengelolaan State di Hook
+    - [x] Update `useChatMessages.ts` untuk mengelola state `isMuted`
+    - [x] Tambahkan listener socket `conversation.muted`
+    - [x] Buat fungsi `handleMute`
+- [x] Implementasi UI Utama (Daftar Chat)
+    - [x] Ikon dinamis (Bell/BellOff) di header mode seleksi `chats.tsx`
+    - [x] Dialog Durasi Mute (8 Jam, 1 Minggu, Selalu) dengan animasi bounce
+    - [x] Integrasi toggle Mute/Unmute massal
+- [x] Pembaruan Komponen & Detail
+    - [x] Update `components/ChatItem.tsx` untuk ikon mute abu-abu
+    - [x] Sinkronisasi status mute di `app/chat/[id].tsx` via hook
+- [x] Pengujian & Verifikasi
+    - [x] Verifikasi transisi ikon Mute -> Unmute di header
+    - [x] Verifikasi kemunculan ikon mute di list item
+    - [x] Tes sinkronisasi real-time via WebSocket

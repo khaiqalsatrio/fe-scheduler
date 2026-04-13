@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
-import { User, Users, Check } from 'lucide-react-native';
+import { User, Users, Check, VolumeX, Pin } from 'lucide-react-native';
 
 interface ChatItemProps {
   name: string;
@@ -13,6 +13,8 @@ interface ChatItemProps {
   onPress?: () => void;
   onLongPress?: () => void;
   isSelected?: boolean;
+  isMuted?: boolean;
+  isPinned?: boolean;
 }
 
 export const ChatItem: React.FC<ChatItemProps> = ({
@@ -26,6 +28,8 @@ export const ChatItem: React.FC<ChatItemProps> = ({
   onPress,
   onLongPress,
   isSelected,
+  isMuted,
+  isPinned,
 }) => {
   return (
     <TouchableOpacity 
@@ -62,11 +66,19 @@ export const ChatItem: React.FC<ChatItemProps> = ({
           <Text style={styles.lastMessage} numberOfLines={1}>
             {lastMessage}
           </Text>
-          {unreadCount ? (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{unreadCount}</Text>
-            </View>
-          ) : null}
+          {isMuted && (
+            <VolumeX color="#999" size={16} style={{ marginLeft: 8 }} />
+          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+            {isPinned && (
+              <Pin size={14} color="#999" style={{ transform: [{ rotate: '45deg' }], marginRight: unreadCount ? 8 : 0 }} fill="#999" />
+            )}
+            {unreadCount ? (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadText}>{unreadCount}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
     </TouchableOpacity>
