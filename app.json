@@ -9,14 +9,21 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Aplikasi memerlukan pengenalan suara untuk mengubah ucapan menjadi teks.",
+        "NSMicrophoneUsageDescription": "Aplikasi memerlukan mikrofon untuk merekam suara Anda."
+      }
     },
     "android": {
       "package": "com.bolt.scheduler",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "splash": {
       "image": "./assets/images/logo.png",
@@ -44,6 +51,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "251ae02c-fc5b-47ff-a1ec-362d94c4be14"
+      }
     }
   }
 }
