@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MessageBubble } from '../../components/MessageBubble';
 import { ChatInput } from '../../components/ChatInput';
 import { MessageActionMenu } from '../../components/MessageActionMenu';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 // Hooks & Services
 import { useChatSocket } from '../../hooks/useChatSocket';
@@ -29,7 +30,6 @@ export default function ChatDetailScreen() {
   const [isAIActionsVisible, setIsAIActionsVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isMenuModalVisible, setIsMenuModalVisible] = useState(false);
-  const deleteModalAnim = useRef(new Animated.Value(0)).current;
   const menuModalAnim = useRef(new Animated.Value(0)).current;
   const aiMenuAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -78,25 +78,6 @@ export default function ChatDetailScreen() {
       ])
     ).start();
   }, [pulseAnim]);
-
-  useEffect(() => {
-    if (isDeleteModalVisible) {
-      deleteModalAnim.setValue(0);
-      Animated.spring(deleteModalAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        bounciness: 12,
-        speed: 10
-      }).start();
-    } else {
-      Animated.spring(deleteModalAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 0,
-        speed: 10
-      }).start();
-    }
-  }, [isDeleteModalVisible]);
 
   useEffect(() => {
     if (isMenuModalVisible) {
@@ -535,59 +516,27 @@ export default function ChatDetailScreen() {
       />
 
       {/* Delete Confirmation Modal (Native Mockup Design) */}
-      <Modal
+      <ConfirmModal
         visible={isDeleteModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsDeleteModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setIsDeleteModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <Animated.View style={[
-              styles.modalContent,
-              { 
-                opacity: deleteModalAnim,
-                transform: [{ scale: deleteModalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
-              }
-            ]}>
-              <TouchableWithoutFeedback>
-                <View>
-                  <Text style={styles.modalTitle}>Hapus chat dengan {name as string}?</Text>
-                  <Text style={styles.modalMessage}>Pesan akan dihapus dari semua perangkat.</Text>
-                  
-                  <View style={styles.modalActionContainer}>
-                    <TouchableOpacity 
-                      onPress={() => setIsDeleteModalVisible(false)}
-                      style={styles.modalCancelButton}
-                    >
-                      <Text style={styles.modalCancelText}>Batal</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      onPress={async () => {
-                        setIsDeleteModalVisible(false);
-                        try {
-                          const newConv = await ChatService.deleteConversation(id as string);
-                          router.replace({
-                            pathname: `/chat/${newConv.id}` as any,
-                            params: { name: name as string }
-                          });
-                        } catch (error) {
-                          console.error("Reset Error:", error);
-                          Alert.alert('Gagal Hapus', 'Gagal menghapus percakapan. Silakan coba lagi.');
-                        }
-                      }}
-                      style={styles.modalDeleteButton}
-                    >
-                      <Text style={styles.modalDeleteText}>Hapus</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
-            </Animated.View>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+        onClose={() => setIsDeleteModalVisible(false)}
+        onConfirm={async () => {
+          setIsDeleteModalVisible(false);
+          try {
+            const newConv = await ChatService.deleteConversation(id as string);
+            router.replace({
+              pathname: `/chat/${newConv.id}` as any,
+              params: { name: name as string }
+            });
+          } catch (error) {
+            console.error("Reset Error:", error);
+            Alert.alert('Gagal Hapus', 'Gagal menghapus percakapan. Silakan coba lagi.');
+          }
+        }}
+        title={`Hapus chat dengan ${name as string}?`}
+        message="Pesan akan dihapus dari semua perangkat."
+        confirmText="Hapus"
+        type="destructive"
+      />
 
       {/* Options Menu Modal (Mockup Style with Animation) */}
       <Modal

@@ -8,21 +8,21 @@ import AuthService from '../../services/authService';
 const SLIDE_DATA = [
   {
     id: '1',
-    image: require('../../assets/images/thedata.png'),
-    title: 'AnalyFYON the Data.',
-    desc: 'Olah data jadi insight yang jelas. Bantu ambil keputusan tanpa harus mikir lama.'
+    image: require('../../assets/images/bikindokumen.png'),
+    title: 'Bikin dokumen jadi sat set',
+    desc: 'Dari chat langsung jadi slide atau dokumen. Gak perlu mulai dari nol.'
   },
   {
     id: '2',
-    image: require('../../assets/images/thenoise.jpg'),
-    title: 'ClariFYON the Noise.',
-    desc: 'Ubah percakapan panjang jadi poin inti. Fokus ke hal yang benar-benar penting tanpa distraksi.'
+    image: require('../../assets/images/olahdata.png'),
+    title: 'Analisa data tanpa pusing',
+    desc: 'Tera bantu pecahin data jadi insight yang gampang kamu pahami dan pakai.'
   },
   {
     id: '3',
-    image: require('../../assets/images/theflow.jpg'),
-    title: 'SimpliFYON the Flow.',
-    desc: 'Rapikan proses jadi lebih ringan dan terarah. Biar kerja jalan tanpa hambatan.'
+    image: require('../../assets/images/rapihinkerja.png'),
+    title: 'Rapihin kerjaan, biar gak ribet',
+    desc: 'Semua flow dan info bisa kamu rapihin langsung di chat. Lebih jelas, lebih cepat.'
   }
 ];
 
@@ -165,7 +165,9 @@ export default function OnboardingScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>
           <View style={styles.imagePlaceholder}>
-            <Image source={SLIDE_DATA[currentIndex].image} style={styles.heroImage} resizeMode="contain" />
+            <View style={styles.circularMask}>
+              <Image source={SLIDE_DATA[currentIndex].image} style={styles.heroImage} resizeMode="cover" />
+            </View>
           </View>
           <View style={styles.textSection}>
             <Text style={styles.heroTitle}>{SLIDE_DATA[currentIndex].title}</Text>
@@ -270,28 +272,37 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FAFAFD' },
+  safeArea: { flex: 1, backgroundColor: '#F8F9FA' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 25, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12, paddingBottom: 15,
   },
-  logoImageLarge: { width: 44, height: 44, borderRadius: 22 },
-  headerExploreBtn: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#EAEAEA' },
+  logoImageLarge: { width: 44, height: 44, borderRadius: 12 },
+  headerExploreBtn: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 25, borderWidth: 1, borderColor: '#EAEAEA' },
   headerExploreText: { fontSize: 13, fontWeight: '600', color: '#333' },
   scrollContent: { flexGrow: 1 },
-  heroSection: { alignItems: 'center', paddingTop: 15, paddingHorizontal: 30, width: '100%' },
-  imagePlaceholder: { width: '100%', height: 250, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  heroSection: { alignItems: 'center', paddingTop: 10, paddingHorizontal: 30, width: '100%' },
+  imagePlaceholder: { width: '100%', height: 320, justifyContent: 'center', alignItems: 'center', marginBottom: 25 },
+  circularMask: {
+    width: 300,
+    height: 300,
+    borderTopLeftRadius: 150,
+    borderTopRightRadius: 150,
+    borderBottomRightRadius: 150,
+    borderBottomLeftRadius: 40,
+    overflow: 'hidden',
+  },
   heroImage: { width: '100%', height: '100%' },
-  textSection: { width: '100%', marginBottom: 30 },
-  heroTitle: { fontSize: 28, fontWeight: '900', color: '#111', marginBottom: 10 },
-  heroDesc: { fontSize: 15, color: '#666', lineHeight: 22, fontWeight: '400' },
+  textSection: { width: '100%', marginBottom: 20, alignItems: 'center' },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: '#111', marginBottom: 12, textAlign: 'center' },
+  heroDesc: { fontSize: 14, color: '#666', lineHeight: 20, fontWeight: '400', textAlign: 'center', paddingHorizontal: 10 },
   loginCard: {
     backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40,
-    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 50, flex: 1,
-    elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.05, shadowRadius: 10,
+    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 60, flex: 1,
+    elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 15,
   },
-  inputWrapper: { marginBottom: 15, position: 'relative' },
-  input: { backgroundColor: '#F3F4F6', borderRadius: 12, height: 54, paddingHorizontal: 20, fontSize: 16, color: '#333' },
+  inputWrapper: { marginBottom: 20, position: 'relative' },
+  input: { backgroundColor: '#F3F4F6', borderRadius: 15, height: 56, paddingHorizontal: 20, fontSize: 16, color: '#333' },
   
   // TOOLTIP STYLES
   tooltipContainer: {
@@ -314,39 +325,38 @@ const styles = StyleSheet.create({
 
   completedEmailBar: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6',
-    borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 15,
+    borderRadius: 15, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 20,
   },
   backBtn: { marginRight: 10 },
   emailTextContainer: { flex: 1 },
   completedEmailLabel: { fontSize: 12, color: '#999', fontWeight: '600' },
   completedEmailValue: { fontSize: 14, color: '#333', fontWeight: '500' },
   passwordInputContainer: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12,
-    height: 54, paddingHorizontal: 20,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 15,
+    height: 56, paddingHorizontal: 20,
   },
   passwordInput: { flex: 1, fontSize: 16, color: '#333' },
   eyeIcon: { padding: 5 },
-  guideText: { fontSize: 12, color: '#999', marginTop: 10, lineHeight: 18 },
   nextButton: {
-    height: 54,
-    borderRadius: 27,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
-    backgroundColor: '#A8E6CF',
+    backgroundColor: '#81D4A3',
   },
-  buttonDisabled: { backgroundColor: '#A8E6CF', opacity: 0.6 },
+  buttonDisabled: { backgroundColor: '#81D4A3', opacity: 0.6 },
   buttonActive: {
-    backgroundColor: '#27AE60',
+    backgroundColor: '#81D4A3',
   },
   buttonLoading: { opacity: 0.8 },
   nextButtonText: { color: '#FFF', fontSize: 18, fontWeight: '800' },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 25 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#F3F4F6' },
   dividerText: { marginHorizontal: 15, color: '#999', fontSize: 14, fontWeight: '500' },
   googleButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 54,
-    borderRadius: 27, borderWidth: 1.5, borderColor: '#EAEAEA', backgroundColor: '#FFF',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56,
+    borderRadius: 28, borderWidth: 1.5, borderColor: '#EAEAEA', backgroundColor: '#FFF',
   },
   googleIcon: { width: 22, height: 22, marginRight: 12 },
   googleButtonText: { fontSize: 16, fontWeight: '700', color: '#333' },
