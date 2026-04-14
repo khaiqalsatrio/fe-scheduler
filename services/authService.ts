@@ -27,6 +27,21 @@ export const AuthService = {
   },
 
   /**
+   * Register a new user
+   */
+  async register(data: { 
+    email: string; 
+    password: string; 
+    name: string; 
+    company: string; 
+    phone: string; 
+    nik: string; 
+  }): Promise<any> {
+    const response = await apiClient.post('/register', data);
+    return response.data;
+  },
+
+  /**
    * Logout user and clear session
    */
   async logout(): Promise<void> {
