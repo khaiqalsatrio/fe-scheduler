@@ -13,7 +13,8 @@
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Aplikasi memerlukan pengenalan suara untuk mengubah ucapan menjadi teks.",
         "NSMicrophoneUsageDescription": "Aplikasi memerlukan mikrofon untuk merekam suara Anda."
-      }
+      },
+      "bundleIdentifier": "com.bolt.scheduler"
     },
     "android": {
       "package": "com.bolt.scheduler",
