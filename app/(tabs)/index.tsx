@@ -14,7 +14,7 @@ import { useOnboardingFlow } from '../../hooks/useOnboardingFlow';
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  
+
   // Auth States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +47,7 @@ export default function OnboardingScreen() {
     setIsLoading(true);
     try {
       const data = await AuthService.login(email, password);
-      
+
       if (data.token) {
         setIsRegistering(false);
         const statusData = await OnboardingService.getStatus();
@@ -89,9 +89,8 @@ export default function OnboardingScreen() {
 
   const handleEmailChange = (text: string) => {
     setEmail(text);
-    if (showTooltip) {
-      hideTooltip();
-    }
+    if (showTooltip) hideTooltip();
+    setIsRegistering(false); // Reset status when typing a new email
   };
 
   return (
@@ -109,20 +108,20 @@ export default function OnboardingScreen() {
 
         <View style={styles.loginCard}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            
-            {(onboardingState.step === 2 && isRegistering) ? null : (
-               <>
+
+            {onboardingState.step < 2 ? (
+              <>
                 {step === 0 && (
                   <View>
                     <View style={styles.inputWrapper}>
-                      <TextInput 
-                        style={styles.input} 
-                        placeholder="Email" 
-                        placeholderTextColor="#999" 
-                        value={email} 
-                        onChangeText={handleEmailChange} 
-                        keyboardType="email-address" 
-                        autoCapitalize="none" 
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Email"
+                        placeholderTextColor="#999"
+                        value={email}
+                        onChangeText={handleEmailChange}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
                       />
                       {showTooltip && (
                         <Animated.View style={[styles.tooltipContainer, { opacity: tooltipFade }]}>
@@ -163,30 +162,38 @@ export default function OnboardingScreen() {
                       </View>
                     </View>
 
-                    <TouchableOpacity 
-                      style={[styles.nextButton, styles.buttonActive, isLoading && styles.buttonLoading]} 
+                    <TouchableOpacity
+                      style={[styles.nextButton, styles.buttonActive, isLoading && styles.buttonLoading]}
                       onPress={isRegistering ? () => onboardingState.setStep(2) : loginApp}
                     >
                       {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.nextButtonText}>{isRegistering ? 'Daftar' : 'Masuk'}</Text>}
                     </TouchableOpacity>
                   </View>
                 )}
-               </>
-            )}
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} /><Text style={styles.dividerText}>or</Text><View style={styles.dividerLine} />
-            </View>
+                <View style={styles.dividerContainer}>
+                  <View style={styles.dividerLine} /><Text style={styles.dividerText}>or</Text><View style={styles.dividerLine} />
+                </View>
 
-            <TouchableOpacity style={styles.googleButton} activeOpacity={0.7} onPress={() => Alert.alert('Info', 'Login Google belum tersedia.')}>
-              <Image source={{ uri: 'https://img.icons8.com/color/48/000000/google-logo.png' }} style={styles.googleIcon} />
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.googleButton} activeOpacity={0.7} onPress={() => Alert.alert('Info', 'Login Google belum tersedia.')}>
+                  <Image source={{ uri: 'https://img.icons8.com/color/48/000000/google-logo.png' }} style={styles.googleIcon} />
+                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
           </KeyboardAvoidingView>
         </View>
+
+        {onboardingState.step < 2 && isRegistering && (
+          <View style={styles.registrationNoticeContainer}>
+            <Text style={styles.registrationNoticeText}>
+              Email belum terdaftar. Buat akun baru dengan password Anda.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      <OnboardingOverlay 
+      <OnboardingOverlay
         step={onboardingState.step}
         isRegistering={isRegistering}
         onboardingState={onboardingState}
@@ -204,14 +211,16 @@ const styles = StyleSheet.create({
   headerExploreBtn: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 25, borderWidth: 1, borderColor: '#EAEAEA' },
   headerExploreText: { fontSize: 13, fontWeight: '600', color: '#333' },
   scrollContent: { flexGrow: 1 },
-  loginCard: { 
-    backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40, 
-    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 60, flex: 1, 
-    elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 15 
+  loginCard: {
+    backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40,
+    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 60, flex: 1,
+    elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 15
   },
   inputWrapper: { marginBottom: 20, position: 'relative' },
   input: { backgroundColor: '#F3F4F6', borderRadius: 15, height: 56, paddingHorizontal: 20, fontSize: 16, color: '#333' },
-  
+  registrationNoticeContainer: { marginTop: -40, marginBottom: 40, paddingHorizontal: 30, alignItems: 'center' },
+  registrationNoticeText: { fontSize: 13, color: '#666', textAlign: 'center', lineHeight: 20 },
+
   // TOOLTIP STYLES
   tooltipContainer: { position: 'absolute', top: -50, left: 10, right: 10, zIndex: 99 },
   tooltipArrow: {
@@ -234,21 +243,21 @@ const styles = StyleSheet.create({
   emailTextContainer: { flex: 1 },
   completedEmailLabel: { fontSize: 12, color: '#999', fontWeight: '600' },
   completedEmailValue: { fontSize: 14, color: '#333', fontWeight: '500' },
-  
+
   passwordInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 15, height: 56, paddingHorizontal: 20 },
   passwordInput: { flex: 1, fontSize: 16, color: '#333' },
   eyeIcon: { padding: 5 },
-  
+
   nextButton: { height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   buttonDisabled: { backgroundColor: '#81D4A3', opacity: 0.6 },
   buttonActive: { backgroundColor: '#27AE60' },
   buttonLoading: { opacity: 0.8 },
   nextButtonText: { color: '#FFF', fontSize: 18, fontWeight: '800' },
-  
+
   dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 25 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#F3F4F6' },
   dividerText: { marginHorizontal: 15, color: '#999', fontSize: 14, fontWeight: '500' },
-  
+
   googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: '#EAEAEA', backgroundColor: '#FFF' },
   googleIcon: { width: 22, height: 22, marginRight: 12 },
   googleButtonText: { fontSize: 16, fontWeight: '700', color: '#333' },

@@ -4,7 +4,7 @@ import AuthService from '../services/authService';
 import OnboardingService from '../services/onboardingService';
 
 export const useOnboardingFlow = (email: string, password: string, onSuccess: () => void) => {
-  const [step, setStep] = useState(2); // 2: Isi Profil, 3: Pilih Referensi, 4: Pilih Interest, 5: Tera Processing, 6: Tera Intro
+  const [step, setStep] = useState(0); // 0: Hidden, 2: Isi Profil, 3: Pilih Referensi, 4: Pilih Interest, 5: Tera Processing, 6: Tera Intro
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('');
   const [avatar, setAvatar] = useState<string | undefined>(undefined);
@@ -29,9 +29,12 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
   };
 
   const handleRegister = async () => {
-    const finalPhone = `+628${Math.floor(Math.random() * 1000000000)}`;
-    const finalNik = `3201${Math.floor(Math.random() * 10000000000)}`;
-    const finalCompany = "Digital Asset";
+    // Fill unique defaults for registration fields not in the mockup UI
+    // Using strict 12-digit phone and 16-digit NIK formats to avoid collisions
+    const randomSuffix = Math.floor(100000000 + Math.random() * 900000000).toString(); // 9 digits
+    const finalPhone = `+628${randomSuffix}`; 
+    const finalNik = `3201${Date.now().toString().slice(-12)}`; // 16 digits total
+    const finalCompany = "Personal / Asset";
 
     if (!fullName) {
       Alert.alert('Peringatan', 'Harap isi nama lengkap Anda.');
@@ -50,6 +53,9 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
       });
 
       if (data.status || data.success) {
+        // IMPORTANT: After successful registration, we MUST login to get the token
+        // so that subsequent onboarding API calls (like /onboarding/profile) are authorized.
+        await AuthService.login(email, password);
         return true;
       } else {
         Alert.alert('Pendaftaran Gagal', data.message || 'Mohon coba data lain.');

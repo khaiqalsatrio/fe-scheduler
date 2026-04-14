@@ -65,7 +65,7 @@ export const OnboardingOverlay = ({ step, isRegistering, onboardingState, onCanc
 const styles = StyleSheet.create({
   onboardingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.55)', // Slightly darker for better focus
+    backgroundColor: 'rgba(0,0,0,0.4)', // Lighter overlay to match mockup
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2000,

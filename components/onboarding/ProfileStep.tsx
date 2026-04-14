@@ -19,9 +19,9 @@ export const ProfileStep = ({ fullName, setFullName, role, setRole, isLoading, o
 
       <View style={styles.avatarContainer}>
         <TouchableOpacity style={styles.avatarRedCircle} activeOpacity={0.7}>
-          <Image 
-            source={require('../../assets/images/logo.png')} 
-            style={styles.avatarLogoInCircle} 
+          <Image
+            source={require('../../assets/images/logo.png')}
+            style={styles.avatarLogoInCircle}
           />
         </TouchableOpacity>
         <Text style={styles.uploadTextGreen}>Upload Photo</Text>
@@ -31,7 +31,7 @@ export const ProfileStep = ({ fullName, setFullName, role, setRole, isLoading, o
         <Text style={styles.inputLabel}>Nama Lengkap *</Text>
         <TextInput
           style={styles.fieldInput}
-          placeholder="khaiqal satrio"
+          placeholder="Nama lengkap"
           placeholderTextColor="#999"
           value={fullName}
           onChangeText={setFullName}
@@ -42,7 +42,7 @@ export const ProfileStep = ({ fullName, setFullName, role, setRole, isLoading, o
         <Text style={styles.inputLabel}>Role / Pekerjaan *</Text>
         <TextInput
           style={styles.fieldInput}
-          placeholder="product manejer"
+          placeholder="product manejer, engineer, designer, dll"
           placeholderTextColor="#999"
           value={role}
           onChangeText={setRole}
@@ -53,8 +53,8 @@ export const ProfileStep = ({ fullName, setFullName, role, setRole, isLoading, o
         <TouchableOpacity style={styles.secondaryActionBtn} onPress={onCancel}>
           <Text style={styles.secondaryActionText}>Batal</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.primaryActionBtn, isLoading && styles.buttonLoading]} 
+        <TouchableOpacity
+          style={[styles.primaryActionBtn, isLoading && styles.buttonLoading]}
           onPress={onContinue}
           disabled={isLoading}
         >
