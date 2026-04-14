@@ -10,7 +10,7 @@ import { OnboardingHero } from '../../components/onboarding/OnboardingHero';
 import { OnboardingOverlay } from '../../components/onboarding/OnboardingOverlay';
 
 // Custom Hooks
-import { useOnboardingFlow } from '../../hooks/useOnboardingFlow';
+import { useOnboarding } from '../../context/OnboardingContext';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -29,9 +29,7 @@ export default function OnboardingScreen() {
   const tooltipFade = useRef(new Animated.Value(0)).current;
 
   // Onboarding Logic
-  const onboardingState = useOnboardingFlow(email, password, () => {
-    router.replace('/(tabs)/chats');
-  });
+  const onboardingState = useOnboarding();
 
   const validateEmailFormat = (text: string) => {
     const reg = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w\w+)+$/;
@@ -54,6 +52,8 @@ export default function OnboardingScreen() {
         if (statusData.data?.onboarding_completed) {
           router.replace('/(tabs)/chats');
         } else {
+          onboardingState.prepareOnboarding(email, password);
+          onboardingState.setIsRegistering(false);
           onboardingState.setStep(2);
         }
       } else {
@@ -164,7 +164,11 @@ export default function OnboardingScreen() {
 
                     <TouchableOpacity
                       style={[styles.nextButton, styles.buttonActive, isLoading && styles.buttonLoading]}
-                      onPress={isRegistering ? () => onboardingState.setStep(2) : loginApp}
+                      onPress={isRegistering ? () => {
+                        onboardingState.prepareOnboarding(email, password);
+                        onboardingState.setIsRegistering(true);
+                        onboardingState.setStep(2);
+                      } : loginApp}
                     >
                       {isLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.nextButtonText}>{isRegistering ? 'Daftar' : 'Masuk'}</Text>}
                     </TouchableOpacity>
@@ -192,14 +196,6 @@ export default function OnboardingScreen() {
           </View>
         )}
       </ScrollView>
-
-      <OnboardingOverlay
-        step={onboardingState.step}
-        isRegistering={isRegistering}
-        onboardingState={onboardingState}
-        onCancel={() => onboardingState.setStep(1)}
-        onComplete={() => router.replace('/(tabs)/chats')}
-      />
     </SafeAreaView>
   );
 }

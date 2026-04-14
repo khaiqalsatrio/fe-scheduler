@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import AuthService from '../services/authService';
 import OnboardingService from '../services/onboardingService';
 
 export const useOnboardingFlow = (email: string, password: string, onSuccess: () => void) => {
+  const router = useRouter();
   const [step, setStep] = useState(0); // 0: Hidden, 2: Isi Profil, 3: Pilih Referensi, 4: Pilih Interest, 5: Tera Processing, 6: Tera Intro
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('');
@@ -14,6 +16,17 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
+
+  // --- Custom Alert System ---
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+
+  const showAlert = (title: string, message: string) => {
+    setAlertTitle(title || 'Info');
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
 
   const fetchOnboardingData = async () => {
     try {
@@ -37,7 +50,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
     const finalCompany = "Personal / Asset";
 
     if (!fullName) {
-      Alert.alert('Peringatan', 'Harap isi nama lengkap Anda.');
+      showAlert('Peringatan', 'Harap isi nama lengkap Anda.');
       return;
     }
 
@@ -58,12 +71,12 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
         await AuthService.login(email, password);
         return true;
       } else {
-        Alert.alert('Pendaftaran Gagal', data.message || 'Mohon coba data lain.');
+        showAlert('Pendaftaran Gagal', data.message || 'Mohon coba data lain.');
         return false;
       }
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Gagal mendaftarkan akun.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
       return false;
     } finally {
       setRegLoading(false);
@@ -72,7 +85,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
 
   const handleSaveProfile = async (isRegistering: boolean) => {
     if (!fullName || !role) {
-      Alert.alert('Peringatan', 'Harap isi nama lengkap dan role pekerjaan Anda.');
+      showAlert('Peringatan', 'Harap isi nama lengkap dan role pekerjaan Anda.');
       return;
     }
 
@@ -87,7 +100,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
       await fetchOnboardingData();
       setStep(3);
     } catch (error) {
-      Alert.alert('Error', 'Gagal menyimpan profil.');
+      showAlert('Error', 'Gagal menyimpan profil.');
     } finally {
       setOnboardingLoading(false);
     }
@@ -95,7 +108,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
 
   const handleSaveReferences = async () => {
     if (selectedReferences.length === 0) {
-      Alert.alert('Peringatan', 'Pilih minimal satu referensi profesional.');
+      showAlert('Peringatan', 'Pilih minimal satu referensi profesional.');
       return;
     }
 
@@ -104,7 +117,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
       await OnboardingService.saveStep2(selectedReferences);
       setStep(4);
     } catch (error) {
-      Alert.alert('Error', 'Gagal menyimpan referensi.');
+      showAlert('Error', 'Gagal menyimpan referensi.');
     } finally {
       setOnboardingLoading(false);
     }
@@ -112,7 +125,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
 
   const handleSaveInterests = async () => {
     if (selectedInterests.length === 0) {
-      Alert.alert('Peringatan', 'Pilih minimal satu kategori interest.');
+      showAlert('Peringatan', 'Pilih minimal satu kategori interest.');
       return;
     }
 
@@ -129,9 +142,12 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
     try {
       await OnboardingService.saveStep3(mappedInterests);
       setStep(5);
-      setTimeout(() => setStep(6), 3000);
+      setTimeout(() => {
+        router.replace('/(tabs)/chats');
+        setStep(6);
+      }, 3000);
     } catch (error) {
-      Alert.alert('Error', 'Gagal menyimpan interest.');
+      showAlert('Error', 'Gagal menyimpan interest.');
     } finally {
       setOnboardingLoading(false);
     }
@@ -141,7 +157,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
     setSelectedReferences(prev => {
       if (prev.includes(id)) return prev.filter(refId => refId !== id);
       if (prev.length < 5) return [...prev, id];
-      Alert.alert('Peringatan', 'Maksimal 5 referensi yang dapat dipilih.');
+      showAlert('Peringatan', 'Maksimal 5 referensi yang dapat dipilih.');
       return prev;
     });
   };
@@ -150,7 +166,7 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
     setSelectedInterests(prev => {
       if (prev.includes(id)) return prev.filter(intId => intId !== id);
       if (prev.length < 3) return [...prev, id];
-      Alert.alert('Peringatan', 'Maksimal 3 interest yang dapat dipilih.');
+      showAlert('Peringatan', 'Maksimal 3 interest yang dapat dipilih.');
       return prev;
     });
   };
@@ -175,5 +191,9 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
     handleSaveInterests,
     toggleReference,
     toggleInterest,
+    alertVisible,
+    setAlertVisible,
+    alertTitle,
+    alertMessage,
   };
 };

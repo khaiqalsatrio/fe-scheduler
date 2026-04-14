@@ -1,9 +1,11 @@
 import React from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { ProfileStep } from './ProfileStep';
 import { ReferenceStep } from './ReferenceStep';
 import { InterestStep } from './InterestStep';
 import { TeraProcessing, TeraIntro } from './TeraScreens';
+import { ConfirmModal } from '../ConfirmModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -19,7 +21,16 @@ export const OnboardingOverlay = ({ step, isRegistering, onboardingState, onCanc
   if (step < 2 || step > 6) return null;
 
   return (
-    <View style={styles.onboardingOverlay}>
+    <View style={[
+      styles.onboardingOverlay,
+      step === 6 && { backgroundColor: 'transparent' }
+    ]}>
+      {step === 6 && (
+        <>
+          <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
+        </>
+      )}
       <View style={[styles.onboardingModal, step === 4 && { maxHeight: '85%' }]}>
         {step === 2 && (
           <ProfileStep 
@@ -58,6 +69,16 @@ export const OnboardingOverlay = ({ step, isRegistering, onboardingState, onCanc
         
         {step === 6 && <TeraIntro onContinue={onComplete} />}
       </View>
+
+      <ConfirmModal
+        visible={onboardingState.alertVisible}
+        onClose={() => onboardingState.setAlertVisible(false)}
+        onConfirm={() => onboardingState.setAlertVisible(false)}
+        title={onboardingState.alertTitle}
+        message={onboardingState.alertMessage}
+        confirmText="OK"
+        singleButton={true}
+      />
     </View>
   );
 };
@@ -73,12 +94,11 @@ const styles = StyleSheet.create({
   onboardingModal: {
     width: '85%', // Slightly narrower for better side margins
     backgroundColor: '#FFF',
-    borderRadius: 32, // More rounded as per mockup
+    borderRadius: 40, // More rounded as per mockup
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2, // Stronger shadow for depth
-    shadowRadius: 18,
-    elevation: 24,
+    // Removed overflow: 'hidden' to allow image to slide in from outside screen
+    shadowOpacity: 0, // Removed shadow for clean look on blur
+    shadowRadius: 0,
+    elevation: 0, // Removed elevation for clean look on blur
   },
 });

@@ -19,6 +19,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   type?: 'destructive' | 'primary';
+  singleButton?: boolean;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -29,7 +30,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   confirmText = 'Konfirmasi',
   cancelText = 'Batal',
-  type = 'primary'
+  type = 'primary',
+  singleButton = false
 }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
@@ -81,12 +83,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 <Text style={styles.modalMessage}>{message}</Text>
                 
                 <View style={styles.modalActionContainer}>
-                  <TouchableOpacity 
-                    onPress={onClose}
-                    style={styles.modalCancelButton}
-                  >
-                    <Text style={styles.modalCancelText}>{cancelText}</Text>
-                  </TouchableOpacity>
+                  {!singleButton && (
+                    <TouchableOpacity 
+                      onPress={onClose}
+                      style={styles.modalCancelButton}
+                    >
+                      <Text style={styles.modalCancelText}>{cancelText}</Text>
+                    </TouchableOpacity>
+                  )}
                   
                   <TouchableOpacity 
                     onPress={onConfirm}
