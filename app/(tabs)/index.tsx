@@ -5,12 +5,35 @@ import { MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import AuthService from '../../services/authService';
 import OnboardingService from '../../services/onboardingService';
 
+<<<<<<< HEAD
 // Modular Components
 import { OnboardingHero } from '../../components/onboarding/OnboardingHero';
 import { OnboardingOverlay } from '../../components/onboarding/OnboardingOverlay';
 
 // Custom Hooks
 import { useOnboardingFlow } from '../../hooks/useOnboardingFlow';
+=======
+const SLIDE_DATA = [
+  {
+    id: '1',
+    image: require('../../assets/images/bikindokumen.png'),
+    title: 'Bikin dokumen jadi sat set',
+    desc: 'Dari chat langsung jadi slide atau dokumen. Gak perlu mulai dari nol.'
+  },
+  {
+    id: '2',
+    image: require('../../assets/images/olahdata.png'),
+    title: 'Analisa data tanpa pusing',
+    desc: 'Tera bantu pecahin data jadi insight yang gampang kamu pahami dan pakai.'
+  },
+  {
+    id: '3',
+    image: require('../../assets/images/rapihinkerja.png'),
+    title: 'Rapihin kerjaan, biar gak ribet',
+    desc: 'Semua flow dan info bisa kamu rapihin langsung di chat. Lebih jelas, lebih cepat.'
+  }
+];
+>>>>>>> 049d75b8c7ba46fec3daffbaccde5396f6a98fbe
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -94,7 +117,21 @@ export default function OnboardingScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+<<<<<<< HEAD
         <OnboardingHero />
+=======
+        <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>
+          <View style={styles.imagePlaceholder}>
+            <View style={styles.circularMask}>
+              <Image source={SLIDE_DATA[currentIndex].image} style={styles.heroImage} resizeMode="cover" />
+            </View>
+          </View>
+          <View style={styles.textSection}>
+            <Text style={styles.heroTitle}>{SLIDE_DATA[currentIndex].title}</Text>
+            <Text style={styles.heroDesc}>{SLIDE_DATA[currentIndex].desc}</Text>
+          </View>
+        </Animated.View>
+>>>>>>> 049d75b8c7ba46fec3daffbaccde5396f6a98fbe
 
         <View style={styles.loginCard}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -168,6 +205,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
   safeArea: { flex: 1, backgroundColor: '#FAFAFD' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12, paddingBottom: 15 },
   logoImageLarge: { width: 44, height: 44, borderRadius: 22 },
@@ -178,22 +216,107 @@ const styles = StyleSheet.create({
   inputWrapper: { marginBottom: 15, position: 'relative' },
   input: { backgroundColor: '#F3F4F6', borderRadius: 12, height: 54, paddingHorizontal: 20, fontSize: 16, color: '#333' },
   completedEmailBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 15 },
+=======
+  safeArea: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 25, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12, paddingBottom: 15,
+  },
+  logoImageLarge: { width: 44, height: 44, borderRadius: 12 },
+  headerExploreBtn: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 25, borderWidth: 1, borderColor: '#EAEAEA' },
+  headerExploreText: { fontSize: 13, fontWeight: '600', color: '#333' },
+  scrollContent: { flexGrow: 1 },
+  heroSection: { alignItems: 'center', paddingTop: 10, paddingHorizontal: 30, width: '100%' },
+  imagePlaceholder: { width: '100%', height: 320, justifyContent: 'center', alignItems: 'center', marginBottom: 25 },
+  circularMask: {
+    width: 300,
+    height: 300,
+    borderTopLeftRadius: 150,
+    borderTopRightRadius: 150,
+    borderBottomRightRadius: 150,
+    borderBottomLeftRadius: 40,
+    overflow: 'hidden',
+  },
+  heroImage: { width: '100%', height: '100%' },
+  textSection: { width: '100%', marginBottom: 20, alignItems: 'center' },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: '#111', marginBottom: 12, textAlign: 'center' },
+  heroDesc: { fontSize: 14, color: '#666', lineHeight: 20, fontWeight: '400', textAlign: 'center', paddingHorizontal: 10 },
+  loginCard: {
+    backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40,
+    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 60, flex: 1,
+    elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 15,
+  },
+  inputWrapper: { marginBottom: 20, position: 'relative' },
+  input: { backgroundColor: '#F3F4F6', borderRadius: 15, height: 56, paddingHorizontal: 20, fontSize: 16, color: '#333' },
+  
+  // TOOLTIP STYLES
+  tooltipContainer: {
+    position: 'absolute', top: -50, left: 10, right: 10, zIndex: 99,
+  },
+  tooltipArrow: {
+    width: 0, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 8,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#333',
+    position: 'absolute', bottom: -8, left: 20,
+  },
+  tooltipContent: {
+    backgroundColor: '#333', borderRadius: 4, paddingVertical: 8, paddingHorizontal: 12,
+    flexDirection: 'row', alignItems: 'center', elevation: 5,
+  },
+  warningIconContainer: {
+    backgroundColor: '#F57C00', width: 18, height: 18, borderRadius: 2, 
+    justifyContent: 'center', alignItems: 'center', marginRight: 10,
+  },
+  tooltipText: { color: '#FFF', fontSize: 12, flex: 1, lineHeight: 16 },
+
+  completedEmailBar: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6',
+    borderRadius: 15, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 20,
+  },
+>>>>>>> 049d75b8c7ba46fec3daffbaccde5396f6a98fbe
   backBtn: { marginRight: 10 },
   emailTextContainer: { flex: 1 },
   completedEmailLabel: { fontSize: 12, color: '#999', fontWeight: '600' },
   completedEmailValue: { fontSize: 14, color: '#333', fontWeight: '500' },
+<<<<<<< HEAD
   passwordInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, height: 54, paddingHorizontal: 20 },
   passwordInput: { flex: 1, fontSize: 16, color: '#333' },
   eyeIcon: { padding: 5 },
   nextButton: { height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   buttonDisabled: { backgroundColor: '#A8E6CF', opacity: 0.6 },
   buttonActive: { backgroundColor: '#27AE60' },
+=======
+  passwordInputContainer: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 15,
+    height: 56, paddingHorizontal: 20,
+  },
+  passwordInput: { flex: 1, fontSize: 16, color: '#333' },
+  eyeIcon: { padding: 5 },
+  nextButton: {
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    backgroundColor: '#81D4A3',
+  },
+  buttonDisabled: { backgroundColor: '#81D4A3', opacity: 0.6 },
+  buttonActive: {
+    backgroundColor: '#81D4A3',
+  },
+>>>>>>> 049d75b8c7ba46fec3daffbaccde5396f6a98fbe
   buttonLoading: { opacity: 0.8 },
   nextButtonText: { color: '#FFF', fontSize: 18, fontWeight: '800' },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 25 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#F3F4F6' },
   dividerText: { marginHorizontal: 15, color: '#999', fontSize: 14, fontWeight: '500' },
+<<<<<<< HEAD
   googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 54, borderRadius: 27, borderWidth: 1.5, borderColor: '#EAEAEA', backgroundColor: '#FFF' },
+=======
+  googleButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56,
+    borderRadius: 28, borderWidth: 1.5, borderColor: '#EAEAEA', backgroundColor: '#FFF',
+  },
+>>>>>>> 049d75b8c7ba46fec3daffbaccde5396f6a98fbe
   googleIcon: { width: 22, height: 22, marginRight: 12 },
   googleButtonText: { fontSize: 16, fontWeight: '700', color: '#333' },
 });

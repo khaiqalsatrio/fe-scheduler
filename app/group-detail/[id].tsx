@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, Image, SafeAreaView, Platform, StatusBar, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Pencil, Users, User, LogOut, Search, Link as LinkIcon, Plus } from 'lucide-react-native';
+import { ChevronLeft, Pencil, Users, User, LogOut, Search, Link as LinkIcon, Plus, X, Trash2 } from 'lucide-react-native';
 import { ChatService } from '../../services/chatService';
+import { AuthService } from '../../services/authService';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 export default function GroupDetailScreen() {
   const { id, title } = useLocalSearchParams();
@@ -13,10 +15,33 @@ export default function GroupDetailScreen() {
   const [groupName, setGroupName] = useState(title as string);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(title as string);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
+  // --- Search States ---
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // --- Modal States ---
+  const [isLeaveModalVisible, setIsLeaveModalVisible] = useState(false);
+  const [isRemoveModalVisible, setIsRemoveModalVisible] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{id: string, name: string} | null>(null);
 
   useEffect(() => {
-    fetchMembers();
+    const init = async () => {
+      const user = await AuthService.getCurrentUser();
+      setCurrentUser(user);
+      fetchMembers();
+    };
+    init();
   }, [id]);
+
+  useEffect(() => {
+    if (currentUser && members.length > 0) {
+      const me = members.find(m => m.userId === currentUser.id);
+      setIsAdminUser(me?.role === 'admin');
+    }
+  }, [currentUser, members]);
 
   const fetchMembers = async () => {
     setIsLoading(true);
@@ -31,6 +56,14 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const filteredMembers = React.useMemo(() => {
+    if (!searchQuery.trim()) return members;
+    return members.filter(m => 
+      m.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.user?.bio?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [members, searchQuery]);
+
   const handleUpdateName = async () => {
     if (!newName.trim()) return;
     try {
@@ -42,31 +75,48 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const handleRemoveMember = (userId: string, memberName: string) => {
+    if (!isAdminUser) return;
+    setMemberToRemove({ id: userId, name: memberName });
+    setIsRemoveModalVisible(true);
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!memberToRemove) return;
+    setIsRemoveModalVisible(false);
+    try {
+      setIsLoading(true);
+      await ChatService.removeMember(id as string, memberToRemove.id);
+      fetchMembers(); // Refresh list
+    } catch (error) {
+      Alert.alert('Error', 'Gagal menghapus anggota.');
+    } finally {
+      setIsLoading(false);
+      setMemberToRemove(null);
+    }
+  };
+
   const handleLeaveGroup = () => {
-    Alert.alert(
-      'Keluar Grup',
-      'Apakah Anda yakin ingin keluar dari grup ini?',
-      [
-        { text: 'Batal', style: 'cancel' },
-        { 
-          text: 'Keluar', 
-          style: 'destructive', 
-          onPress: async () => {
-            try {
-              await ChatService.removeMember(id as string, 'me'); 
-              router.replace('/(tabs)/chats');
-            } catch (error) {
-              Alert.alert('Error', 'Gagal keluar grup.');
-            }
-          }
-        }
-      ]
-    );
+    if (!currentUser) return;
+    setIsLeaveModalVisible(true);
+  };
+
+  const confirmLeaveGroup = async () => {
+    setIsLeaveModalVisible(false);
+    try {
+      setIsLoading(true);
+      await ChatService.removeMember(id as string, currentUser.id); 
+      router.replace('/(tabs)/chats');
+    } catch (error) {
+      Alert.alert('Error', 'Gagal keluar grup.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderMember = ({ item, index }: { item: any, index: number }) => {
-    // Determine if this is the last member item in the card
-    const isLast = index === members.length - 1;
+    // Determine if this is the last member item in the filtered list
+    const isLast = index === filteredMembers.length - 1;
     return (
       <View style={[
         styles.memberItem, 
@@ -81,17 +131,27 @@ export default function GroupDetailScreen() {
         </View>
         <View style={styles.memberInfo}>
           <Text style={styles.memberName} numberOfLines={1}>
-            {item.user?.name || 'User'} {item.userId === 'me' && '(Anda)'}
+            {item.user?.name || 'User'} {item.userId === currentUser?.id && '(Anda)'}
           </Text>
           <Text style={styles.memberBio} numberOfLines={1}>
             {item.user?.bio || 'Haii, saya menggunakan ChatAja!'}
           </Text>
         </View>
-        {item.role === 'admin' && (
-          <View style={styles.adminBadge}>
-            <Text style={styles.adminText}>Admin</Text>
-          </View>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {item.role === 'admin' && (
+            <View style={styles.adminBadge}>
+              <Text style={styles.adminText}>Admin</Text>
+            </View>
+          )}
+          {isAdminUser && item.userId !== currentUser?.id && (
+            <TouchableOpacity 
+              onPress={() => handleRemoveMember(item.userId, item.user?.name || 'Anggota')}
+              style={styles.removeIconBtn}
+            >
+              <Trash2 color="#FF3B30" size={18} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
@@ -109,7 +169,7 @@ export default function GroupDetailScreen() {
       </View>
 
       <FlatList
-        data={members}
+        data={filteredMembers}
         keyExtractor={(item) => item.id}
         renderItem={renderMember}
         ListHeaderComponent={() => (
@@ -147,13 +207,36 @@ export default function GroupDetailScreen() {
             </View>
 
             <View style={styles.membersHeader}>
-              <Text style={styles.membersCount}>{members.length} anggota</Text>
-              <TouchableOpacity style={styles.searchCircleBtn}>
-                <Search color="#00A884" size={18} />
-              </TouchableOpacity>
+              {isSearching ? (
+                <View style={styles.searchContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Cari nama anggota..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={() => { setIsSearching(false); setSearchQuery(''); }}>
+                    <X color="#666" size={20} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.membersCount}>{members.length} anggota</Text>
+                  <TouchableOpacity 
+                    style={styles.searchCircleBtn}
+                    onPress={() => setIsSearching(true)}
+                  >
+                    <Search color="#00A884" size={18} />
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
 
-            <View style={styles.mainCard}>
+            <View style={[
+              styles.mainCard,
+              filteredMembers.length === 0 && { borderBottomLeftRadius: 20, borderBottomRightRadius: 20, borderBottomWidth: 0 }
+            ]}>
               <TouchableOpacity style={styles.addMemberRow}>
                 <View style={styles.actionIconCircle}>
                   <Plus color="#FFF" size={22} />
@@ -176,6 +259,28 @@ export default function GroupDetailScreen() {
         onRefresh={fetchMembers}
         contentContainerStyle={styles.listContent}
       />
+      <ConfirmModal
+        visible={isLeaveModalVisible}
+        onClose={() => setIsLeaveModalVisible(false)}
+        onConfirm={confirmLeaveGroup}
+        title="Keluar Grup"
+        message="Apakah Anda yakin ingin keluar dari grup ini?"
+        confirmText="Keluar"
+        type="destructive"
+      />
+
+      <ConfirmModal
+        visible={isRemoveModalVisible}
+        onClose={() => {
+          setIsRemoveModalVisible(false);
+          setMemberToRemove(null);
+        }}
+        onConfirm={confirmRemoveMember}
+        title="Hapus Anggota"
+        message={`Apakah Anda yakin ingin menghapus ${memberToRemove?.name} dari grup ini?`}
+        confirmText="Hapus"
+        type="destructive"
+      />
     </SafeAreaView>
   );
 }
@@ -191,7 +296,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     height: 60,
-    backgroundColor: '#FFF',
+    backgroundColor: '#F0F2F5',
   },
   backButton: {
     padding: 5,
@@ -286,6 +391,22 @@ const styles = StyleSheet.create({
     marginTop: 25,
     marginBottom: 10,
     width: '100%',
+    minHeight: 40,
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8E8E8',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    height: 40,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#000',
+    marginRight: 10,
   },
   membersCount: {
     fontSize: 16,
@@ -393,6 +514,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#00A884',
     fontWeight: '700',
+  },
+  removeIconBtn: {
+    padding: 8,
+    marginLeft: 5,
   },
   footer: {
     marginTop: 10,
