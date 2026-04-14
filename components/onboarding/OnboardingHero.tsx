@@ -4,21 +4,21 @@ import { StyleSheet, View, Text, Image, Animated } from 'react-native';
 const SLIDE_DATA = [
   {
     id: '1',
-    image: require('../../assets/images/thedata.png'),
-    title: 'AnalyFYON the Data.',
-    desc: 'Olah data jadi insight yang jelas. Bantu ambil keputusan tanpa harus mikir lama.'
+    image: require('../../assets/images/bikindokumen.png'),
+    title: 'Bikin dokumen jadi sat set',
+    desc: 'Dari chat langsung jadi slide atau dokumen. Gak perlu mulai dari nol.'
   },
   {
     id: '2',
-    image: require('../../assets/images/thenoise.jpg'),
-    title: 'ClariFYON the Noise.',
-    desc: 'Ubah percakapan panjang jadi poin inti. Fokus ke hal yang benar-benar penting tanpa distraksi.'
+    image: require('../../assets/images/olahdata.png'),
+    title: 'Analisa data tanpa pusing',
+    desc: 'Tera bantu pecahin data jadi insight yang gampang kamu pahami dan pakai.'
   },
   {
     id: '3',
-    image: require('../../assets/images/theflow.jpg'),
-    title: 'SimpliFYON the Flow.',
-    desc: 'Rapikan proses jadi lebih ringan dan terarah. Biar kerja jalan tanpa hambatan.'
+    image: require('../../assets/images/rapihinkerja.png'),
+    title: 'Rapihin kerjaan, biar gak ribet',
+    desc: 'Semua flow dan info bisa kamu rapihin langsung di chat. Lebih jelas, lebih cepat.'
   }
 ];
 
@@ -48,7 +48,9 @@ export const OnboardingHero = () => {
   return (
     <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>
       <View style={styles.imagePlaceholder}>
-        <Image source={SLIDE_DATA[currentIndex].image} style={styles.heroImage} resizeMode="contain" />
+        <View style={styles.circularMask}>
+          <Image source={SLIDE_DATA[currentIndex].image} style={styles.heroImage} resizeMode="cover" />
+        </View>
       </View>
       <View style={styles.textSection}>
         <Text style={styles.heroTitle}>{SLIDE_DATA[currentIndex].title}</Text>
@@ -59,10 +61,19 @@ export const OnboardingHero = () => {
 };
 
 const styles = StyleSheet.create({
-  heroSection: { alignItems: 'center', paddingTop: 15, paddingHorizontal: 30, width: '100%' },
-  imagePlaceholder: { width: '100%', height: 250, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  heroSection: { alignItems: 'center', paddingTop: 10, paddingHorizontal: 30, width: '100%' },
+  imagePlaceholder: { width: '100%', height: 320, justifyContent: 'center', alignItems: 'center', marginBottom: 25 },
+  circularMask: {
+    width: 300,
+    height: 300,
+    borderTopLeftRadius: 150,
+    borderTopRightRadius: 150,
+    borderBottomRightRadius: 150,
+    borderBottomLeftRadius: 40,
+    overflow: 'hidden',
+  },
   heroImage: { width: '100%', height: '100%' },
-  textSection: { width: '100%', marginBottom: 30 },
-  heroTitle: { fontSize: 28, fontWeight: '900', color: '#111', marginBottom: 10 },
-  heroDesc: { fontSize: 15, color: '#666', lineHeight: 22, fontWeight: '400' },
+  textSection: { width: '100%', marginBottom: 20, alignItems: 'center' },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: '#111', marginBottom: 12, textAlign: 'center' },
+  heroDesc: { fontSize: 14, color: '#666', lineHeight: 20, fontWeight: '400', textAlign: 'center', paddingHorizontal: 10 },
 });
