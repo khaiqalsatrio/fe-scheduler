@@ -54,19 +54,79 @@ Aplikasi telah menggunakan library `buffer` untuk menangani dekode JWT token ali
 
 ## 🚀 Cara Menjalankan
 
-1. Install dependensi:
-   ```bash
-   npm install
-   ```
-2. Jalankan Metro Bundler:
-   ```bash
-   npx expo start
-   ```
-3. Jalankan di Android:
-   ```bash
-   npm run android
-   ```
+### 1. Persiapan Awal
+Pastikan Anda sudah menginstal dependensi:
+```bash
+npm install
+```
+
+### 2. Menjalankan di Development (Metro Bundler)
+```bash
+npx expo start
+```
+
+### 3. Menjalankan di iOS (Emulator/Device)
+Pastikan Anda menggunakan Mac dan sudah menginstal CocoaPods:
+```bash
+# Menjalankan langsung
+npm run ios
+
+# Jika ingin melakukan clean install pods terlebih dahulu
+cd ios && pod install && cd ..
+npm run ios
+```
+
+### 4. Menjalankan di Android (Emulator/Device)
+Pastikan Android Studio dan SDK sudah terkonfigurasi:
+```bash
+npm run android
+```
+
+---
+
+## 🏗️ Cara Build (Production)
+
+### Build Android (APK/AAB)
+
+#### Opsi A: Local Build (Membutuhkan Android Studio/SDK)
+Untuk menghasilkan APK Debug/Release di lokal:
+```bash
+# Untuk Debug APK
+npx expo run:android --variant debug
+
+# Untuk Release APK
+npx expo run:android --variant release
+```
+Hasil build akan berada di `android/app/build/outputs/apk/`.
+
+#### Opsi B: EAS Build (Cloud Build - Direkomendasikan)
+Jika Anda menggunakan Expo Application Services:
+```bash
+# Login ke akun Expo
+npx eas-cli login
+
+# Build APK (konfigurasi di eas.json)
+eas build --platform android --profile preview
+```
+
+#### Opsi C: Native Gradle Build (Manual)
+Jika folder `android` sudah digenerate (via `prebuild`), Anda bisa build langsung menggunakan Gradle:
+```bash
+cd android
+
+# Membersihkan build sebelumnya
+./gradlew clean
+
+# Build APK Release
+./gradlew assembleRelease
+
+# Build AAB (untuk Play Store)
+./gradlew bundleRelease
+```
+Hasil `.apk` akan berada di `android/app/build/outputs/apk/release/`.
 
 ---
 
 *Dikembangkan untuk Project Lifecycle Management - ChatAja Mobile*
+
+
