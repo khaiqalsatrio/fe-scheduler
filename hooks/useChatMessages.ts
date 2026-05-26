@@ -114,24 +114,24 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
       }
 
       const formattedMessages: Message[] = rawMessages.map((m: any) => ({
-        id: m.id?.toString() || m.client_message_id || Math.random().toString(),
+        id: m.id?.toString() || m.clientMessageId || m.client_message_id || Math.random().toString(),
         conversation_id: conversationId,
-        sender_id: m.sender_id,
+        sender_id: m.senderId || m.sender_id,
         text: m.content || m.text || '', // support both
         content: m.content || m.text || '',
-        time: formatMessageTime(m.created_at),
-        isMine: myIdRef.current ? m.sender_id === myIdRef.current : !!m.is_mine,
-        isPinned: !!m.is_pinned,
-        isEdited: !!m.edited_at,
-        isDeleted: !!m.deleted_at,
-        status: m.status || (m.read_at ? 'read' : 'sent'),
-        reactions: m.reactions || [],
-        created_at: m.created_at || new Date().toISOString(),
-        senderName: m.sender_id === '00000000-0000-0000-0000-000000000000' ? 'Tera AI' : (m.sender?.name || m.sender_name),
+        time: formatMessageTime(m.createdAt || m.created_at),
+        isMine: myIdRef.current ? (m.senderId || m.sender_id) === myIdRef.current : !!m.is_mine,
+        isPinned: !!(m.isPinned || m.is_pinned),
+        isEdited: !!(m.isEdited || m.edited_at),
+        isDeleted: !!(m.deletedAt || m.deleted_at),
+        status: m.status || (m.readAt || m.read_at ? 'read' : 'sent'),
+        reactions: m.reactions || m.meta?.reactions || [],
+        created_at: m.createdAt || m.created_at || new Date().toISOString(),
+        senderName: (m.senderId || m.sender_id) === '00000000-0000-0000-0000-000000000000' ? 'Tera AI' : (m.sender?.name || m.sender_name),
         type: m.type || 'text',
-        replyTo: m.reply_to_message ? {
-          name: m.reply_to_message.sender_id === myIdRef.current ? 'Anda' : (m.reply_to_message.sender_name || conversationName || 'User'),
-          text: m.reply_to_message.content
+        replyTo: (m.replyToMessage || m.reply_to_message) ? {
+          name: (m.replyToMessage || m.reply_to_message).senderId === myIdRef.current ? 'Anda' : ((m.replyToMessage || m.reply_to_message).sender?.name || conversationName || 'User'),
+          text: (m.replyToMessage || m.reply_to_message).content
         } : undefined,
         file: m.meta?.file ? {
           url: m.meta.file.url,
@@ -182,7 +182,7 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
 
     socket.on('message.new', (msg: any) => {
       // Delivered signal logic
-      if (msg.sender_id !== myIdRef.current) {
+      if ((msg.senderId || msg.sender_id) !== myIdRef.current) {
         socket.emit('message.delivered', { messageId: msg.id });
         socket.emit('message.read', { conversationId, lastMessageId: msg.id });
       }
@@ -194,21 +194,21 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
       } : undefined;
 
       const newMessage: Message = {
-        id: msg.client_message_id || msg.id,
+        id: msg.clientMessageId || msg.client_message_id || msg.id,
         conversation_id: conversationId,
-        sender_id: msg.sender_id,
+        sender_id: msg.senderId || msg.sender_id,
         text: msg.content || '',
         content: msg.content || '',
-        time: formatMessageTime(msg.created_at),
-        isMine: msg.sender_id === myIdRef.current || !!msg.is_mine,
+        time: formatMessageTime(msg.createdAt || msg.created_at),
+        isMine: (msg.senderId || msg.sender_id) === myIdRef.current || !!msg.is_mine,
         status: msg.status || 'sent',
-        created_at: msg.created_at || new Date().toISOString(),
-        reactions: msg.reactions || [],
+        created_at: msg.createdAt || msg.created_at || new Date().toISOString(),
+        reactions: msg.reactions || msg.meta?.reactions || [],
         type: msg.type || 'text',
-        senderName: msg.sender_id === '00000000-0000-0000-0000-000000000000' ? 'Tera AI' : (msg.sender?.name || msg.sender_name),
-        replyTo: msg.reply_to_message ? {
-          text: msg.reply_to_message.content,
-          name: msg.reply_to_message.sender_id === myIdRef.current ? 'Anda' : (msg.reply_to_message.sender_name || conversationName || 'User')
+        senderName: (msg.senderId || msg.sender_id) === '00000000-0000-0000-0000-000000000000' ? 'Tera AI' : (msg.sender?.name || msg.sender_name),
+        replyTo: (msg.replyToMessage || msg.reply_to_message) ? {
+          text: (msg.replyToMessage || msg.reply_to_message).content,
+          name: (msg.replyToMessage || msg.reply_to_message).senderId === myIdRef.current ? 'Anda' : ((msg.replyToMessage || msg.reply_to_message).sender?.name || conversationName || 'User')
         } : undefined,
         file: fileData,
       };
