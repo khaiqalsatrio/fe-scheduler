@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useRef, useEffect } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Animated, Keyboard, KeyboardEvent } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import AuthService from '../../services/authService';
@@ -14,6 +14,7 @@ import { useOnboarding } from '../../context/OnboardingContext';
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Auth States
   const [email, setEmail] = useState('');
@@ -27,6 +28,37 @@ export default function OnboardingScreen() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipMessage, setTooltipMessage] = useState('');
   const tooltipFade = useRef(new Animated.Value(0)).current;
+  const keyboardHeightAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e: KeyboardEvent) => {
+        Animated.timing(keyboardHeightAnim, {
+          toValue: e.endCoordinates.height + 15,
+          duration: 250,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        Animated.timing(keyboardHeightAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
 
   // Onboarding Logic
   const onboardingState = useOnboarding();
@@ -127,7 +159,7 @@ export default function OnboardingScreen() {
         >
           <OnboardingHero />
 
-          <View style={styles.loginCard}>
+          <View style={[styles.loginCard, { paddingBottom: Math.max(30, insets.bottom + 20) }]}>
             {onboardingState.step < 2 ? (
               <>
                 {step === 0 && (
@@ -214,6 +246,9 @@ export default function OnboardingScreen() {
             </View>
           )}
         </ScrollView>
+        {Platform.OS === 'android' && (
+          <Animated.View style={{ height: keyboardHeightAnim }} />
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -221,7 +256,7 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8F9FA' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12, paddingBottom: 15 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 15, paddingBottom: 15 },
   logoImageLarge: { width: 44, height: 44, borderRadius: 12 },
   headerExploreBtn: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 25, borderWidth: 1, borderColor: '#EAEAEA' },
   headerExploreText: { fontSize: 13, fontWeight: '600', color: '#333' },
@@ -229,7 +264,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   loginCard: {
     backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40,
-    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 60, flexGrow: 1,
+    paddingHorizontal: 30, paddingTop: 30, paddingBottom: 60, flexGrow: 1,
     elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 15
   },
   keyboardAvoidingView: { flexGrow: 1 },

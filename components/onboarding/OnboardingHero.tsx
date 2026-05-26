@@ -62,14 +62,14 @@ export const OnboardingHero = () => {
 
 const styles = StyleSheet.create({
   heroSection: { alignItems: 'center', paddingTop: 10, paddingHorizontal: 30, width: '100%' },
-  imagePlaceholder: { width: '100%', height: 320, justifyContent: 'center', alignItems: 'center', marginBottom: 25 },
+  imagePlaceholder: { width: '100%', height: 260, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
   circularMask: {
-    width: 300,
-    height: 300,
-    borderTopLeftRadius: 150,
-    borderTopRightRadius: 150,
-    borderBottomRightRadius: 150,
-    borderBottomLeftRadius: 40,
+    width: 240,
+    height: 240,
+    borderTopLeftRadius: 120,
+    borderTopRightRadius: 120,
+    borderBottomRightRadius: 120,
+    borderBottomLeftRadius: 32,
     overflow: 'hidden',
   },
   heroImage: { width: '100%', height: '100%' },

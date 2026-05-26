@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator, TextInput, ImageBackground, Modal } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator, TextInput, ImageBackground, Modal, Keyboard, KeyboardEvent } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pin, X, ChevronLeft, User, Users, Search, MoreVertical, Lock, Sparkles, MessageCircle, FileText, Presentation } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ export default function ChatDetailScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   // --- UI States (Menus & Animations) ---
+  const keyboardHeightAnim = useRef(new Animated.Value(0)).current;
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -66,6 +67,36 @@ export default function ChatDetailScreen() {
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
 
   // --- Effects ---
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e: KeyboardEvent) => {
+        Animated.timing(keyboardHeightAnim, {
+          toValue: e.endCoordinates.height + 15,
+          duration: 250,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        Animated.timing(keyboardHeightAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start();
+      }
+    );
+
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
   useEffect(() => {
     fetchMessages();
   }, [id, fetchMessages]);
@@ -500,6 +531,9 @@ export default function ChatDetailScreen() {
           />
         )}
       </ImageBackground>
+      {Platform.OS === 'android' && (
+        <Animated.View style={{ height: keyboardHeightAnim, backgroundColor: '#E5DDD5' }} />
+      )}
 
       <MessageActionMenu
         visible={isMenuVisible}

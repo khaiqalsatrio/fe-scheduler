@@ -100,6 +100,7 @@ export interface ChatListItem {
   name: string;
   lastMessage: string;
   time: string;
+  timestamp?: number;
   unreadCount: number;
   isOnline?: boolean;
   isGroup?: boolean;

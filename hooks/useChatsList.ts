@@ -190,7 +190,7 @@ export const useChatsList = () => {
         .sort((a, b) => {
           if (a.isPinned && !b.isPinned) return -1;
           if (!a.isPinned && b.isPinned) return 1;
-          return 0;
+          return (b.timestamp || 0) - (a.timestamp || 0);
         })
     };
   }, [chats, activeFilter]);

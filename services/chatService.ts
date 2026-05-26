@@ -1,5 +1,8 @@
 import apiClient from './apiClient';
 import { Conversation, ChatListItem } from '../types/chat';
+import * as SecureStore from 'expo-secure-store';
+import { CONFIG } from '../constants/Config';
+import { TokenUtils } from '../utils/tokenUtils';
 
 /**
  * Service to handle Conversation (Chat List) operations
@@ -12,9 +15,26 @@ export const ChatService = {
     const response = await apiClient.get<Conversation[]>('/conversations?includeArchived=true');
     const data = response.data;
     
+    // Get current user ID to determine if the last message is ours
+    let myId = null;
+    try {
+      const token = await SecureStore.getItemAsync(CONFIG.AUTH_TOKEN_KEY);
+      if (token) {
+        const payload = TokenUtils.decode(token);
+        myId = payload?.sub || payload?.id;
+      }
+    } catch (e) {
+      console.warn("Failed to get token for myId check", e);
+    }
+
     // Clean Architecture: Map DTO (Data Transfer Object) to UI Domain Model
     return data
-      .map((item) => ({
+      .map((item) => {
+        // If the last message was sent by us, we don't have unread messages
+        const isLastMessageMine = myId && item.last_message?.sender_id === myId;
+        const unreadCount = isLastMessageMine ? 0 : parseInt(item.unread_count?.toString() || '0', 10);
+
+        return {
         id: item.id.toString(),
         name: item.title || item.recipient?.name || "User",
         lastMessage: item.last_message?.content || (item.last_message ? (() => {
@@ -31,14 +51,18 @@ export const ChatService = {
         time: item.last_message?.created_at 
           ? new Date(item.last_message.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) 
           : "Baru saja",
-        unreadCount: parseInt(item.unread_count?.toString() || '0', 10),
+        timestamp: item.last_message?.created_at 
+          ? new Date(item.last_message.created_at).getTime() 
+          : new Date('2000-01-01').getTime(), // Default low value if no messages
+        unreadCount,
         isOnline: item.is_online || false,
         avatar: item.photo_url || item.recipient?.avatar || undefined,
         isGroup: item.type === 'group',
         isPinned: !!item.pinned_at,
         isMuted: !!item.is_muted,
         isArchived: !!item.is_archived
-      }));
+      };
+    });
   },
 
   /**
