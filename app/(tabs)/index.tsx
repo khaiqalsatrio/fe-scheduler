@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Animated } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import AuthService from '../../services/authService';
-import OnboardingService from '../../services/onboardingService';
 
 // Modular Components
 import { OnboardingHero } from '../../components/onboarding/OnboardingHero';
@@ -48,25 +48,37 @@ export default function OnboardingScreen() {
 
       if (data.token) {
         setIsRegistering(false);
-        const statusData = await OnboardingService.getStatus();
-        if (statusData.data?.onboarding_completed) {
-          router.replace('/(tabs)/chats');
-        } else {
-          onboardingState.prepareOnboarding(email, password);
-          onboardingState.setIsRegistering(false);
-          onboardingState.setStep(2);
-        }
+        // Jika sudah mendaftar (berhasil login), langsung masuk ke chats tanpa perlu cek isOnboarded
+        router.replace('/(tabs)/chats');
       } else {
-        const msg = data.message?.toLowerCase() || '';
-        if (msg.includes('not found') || msg.includes('tidak terdaftar') || msg.includes('kredensial tidak valid')) {
+        const msg = String(data.message || '').toLowerCase();
+        if (
+          msg.includes('not found') || 
+          msg.includes('tidak terdaftar') || 
+          msg.includes('kredensial tidak valid') ||
+          msg.includes('invalid credentials') ||
+          msg.includes('unauthorized') ||
+          msg.includes('incorrect') ||
+          msg.includes('invalid')
+        ) {
           setIsRegistering(true);
         } else {
           Alert.alert('Login Gagal', data.message || 'Harap periksa kembali kredensial Anda.');
         }
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '';
-      if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('tidak terdaftar') || errorMessage.toLowerCase().includes('kredensial tidak valid')) {
+      const rawMessage = error.response?.data?.message || '';
+      const errorMessage = Array.isArray(rawMessage) ? rawMessage.join(', ') : String(rawMessage);
+      const lowerMessage = errorMessage.toLowerCase();
+      if (
+        lowerMessage.includes('not found') || 
+        lowerMessage.includes('tidak terdaftar') || 
+        lowerMessage.includes('kredensial tidak valid') ||
+        lowerMessage.includes('invalid credentials') ||
+        lowerMessage.includes('unauthorized') ||
+        lowerMessage.includes('incorrect') ||
+        lowerMessage.includes('invalid')
+      ) {
         setIsRegistering(true);
       } else {
         Alert.alert('Error', errorMessage || 'Gagal menyambung ke server.');
@@ -96,19 +108,26 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <Image source={require('../../assets/images/logo.png')} style={styles.logoImageLarge} />
-        <TouchableOpacity style={styles.headerExploreBtn} activeOpacity={0.7} onPress={() => router.replace('/(tabs)/chats')}>
-          <Text style={styles.headerExploreText}>Jelajahi Fitur</Text>
-        </TouchableOpacity>
-      </View>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.header}>
+          <Image source={require('../../assets/images/logo.png')} style={styles.logoImageLarge} />
+          <TouchableOpacity style={styles.headerExploreBtn} activeOpacity={0.7} onPress={() => router.replace('/(tabs)/chats')}>
+            <Text style={styles.headerExploreText}>Jelajahi Fitur</Text>
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <OnboardingHero />
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false} 
+          keyboardShouldPersistTaps="handled"
+        >
+          <OnboardingHero />
 
-        <View style={styles.loginCard}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-
+          <View style={styles.loginCard}>
             {onboardingState.step < 2 ? (
               <>
                 {step === 0 && (
@@ -185,17 +204,17 @@ export default function OnboardingScreen() {
                 </TouchableOpacity>
               </>
             ) : null}
-          </KeyboardAvoidingView>
-        </View>
-
-        {onboardingState.step < 2 && isRegistering && (
-          <View style={styles.registrationNoticeContainer}>
-            <Text style={styles.registrationNoticeText}>
-              Email belum terdaftar. Buat akun baru dengan password Anda.
-            </Text>
           </View>
-        )}
-      </ScrollView>
+
+          {onboardingState.step < 2 && isRegistering && (
+            <View style={styles.registrationNoticeContainer}>
+              <Text style={styles.registrationNoticeText}>
+                Email belum terdaftar. Buat akun baru dengan password Anda.
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -206,12 +225,14 @@ const styles = StyleSheet.create({
   logoImageLarge: { width: 44, height: 44, borderRadius: 12 },
   headerExploreBtn: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 25, borderWidth: 1, borderColor: '#EAEAEA' },
   headerExploreText: { fontSize: 13, fontWeight: '600', color: '#333' },
+  scrollView: { flex: 1, backgroundColor: '#F8F9FA' },
   scrollContent: { flexGrow: 1 },
   loginCard: {
     backgroundColor: '#FFF', borderTopLeftRadius: 40, borderTopRightRadius: 40,
-    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 60, flex: 1,
+    paddingHorizontal: 30, paddingTop: 40, paddingBottom: 60, flexGrow: 1,
     elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.08, shadowRadius: 15
   },
+  keyboardAvoidingView: { flexGrow: 1 },
   inputWrapper: { marginBottom: 20, position: 'relative' },
   input: { backgroundColor: '#F3F4F6', borderRadius: 15, height: 56, paddingHorizontal: 20, fontSize: 16, color: '#333' },
   registrationNoticeContainer: { marginTop: -40, marginBottom: 40, paddingHorizontal: 30, alignItems: 'center' },

@@ -21,9 +21,7 @@ export const MessageService = {
    * Send a new message (text or media)
    */
   async sendMessage(formData: FormData): Promise<any> {
-    const response = await apiClient.post('/messages', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const response = await apiClient.post('/messages', formData);
     return response.data;
   },
 
@@ -55,7 +53,7 @@ export const MessageService = {
    * Add or toggle reaction to a message
    */
   async reactToMessage(messageId: string, emoji: string): Promise<any> {
-    const response = await apiClient.post(`/messages/${messageId}/reactions`, { emoji });
+    const response = await apiClient.post(`/messages/${messageId}/reactions`, { reaction: emoji });
     return response.data;
   },
 
@@ -72,6 +70,15 @@ export const MessageService = {
    */
   async searchMessages(conversationId: string, query: string): Promise<any[]> {
     const response = await apiClient.get(`/messages/search/${conversationId}?q=${encodeURIComponent(query)}`);
+    const data = response.data;
+    return Array.isArray(data) ? data : data.data || [];
+  },
+
+  /**
+   * Global search messages across all conversations
+   */
+  async searchGlobalMessages(query: string): Promise<any[]> {
+    const response = await apiClient.get(`/messages/search/global?q=${encodeURIComponent(query)}`);
     const data = response.data;
     return Array.isArray(data) ? data : data.data || [];
   },

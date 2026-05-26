@@ -15,7 +15,7 @@ export default function VoiceAiScreen() {
   const [transcribedText, setTranscribedText] = useState('');
   const [copied, setCopied] = useState(false);
 
-  // Animation for the recording ripple effect
+  // Animation for the recording ripple effect 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // React to voice events in real-time

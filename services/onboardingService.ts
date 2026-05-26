@@ -5,63 +5,53 @@ import apiClient from './apiClient';
  */
 export const OnboardingService = {
   /**
-   * Check current user onboarding status
+   * Get my onboarding data
    */
-  async getStatus(): Promise<any> {
-    const response = await apiClient.get('/onboarding/status');
-    return response.data;
-  },
-
-  /**
-   * Get list of professional reference options
-   */
-  async getReferences(): Promise<any> {
-    const response = await apiClient.get('/onboarding/references/options');
-    return response.data;
-  },
-
-  /**
-   * Get list of interest category options
-   */
-  async getInterests(): Promise<any> {
-    const response = await apiClient.get('/onboarding/interests/options');
-    return response.data;
-  },
-
-  /**
-   * Step 1: Save name, position, and avatar
-   */
-  async saveStep1(data: { name: string; position: string; avatar?: any }): Promise<any> {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('position', data.position);
-    if (data.avatar) {
-      formData.append('avatar', data.avatar);
+  async getOnboarding(): Promise<any> {
+    try {
+      const response = await apiClient.get('/onboarding/me');
+      return response.data;
+    } catch (error) {
+      return null;
     }
-    
-    const response = await apiClient.post('/onboarding/profile', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
   },
 
   /**
-   * Step 2: Save professional references (max 5)
+   * Submit onboarding data
    */
-  async saveStep2(topics: string[]): Promise<any> {
-    const response = await apiClient.post('/onboarding/references', { topics });
+  async submitOnboarding(data: {
+    references: string[];
+    interests: { category: string; sub_category: string }[];
+  }): Promise<any> {
+    const response = await apiClient.post('/onboarding', data);
     return response.data;
   },
 
-  /**
-   * Step 3: Save interests (max 3) and mark onboarding as completed
-   */
-  async saveStep3(interests: { category: string; sub_category: string }[]): Promise<any> {
-    const response = await apiClient.post('/onboarding/interests', { interests });
-    return response.data;
+  // Note: getReferences and getInterests endpoints were removed from the API documentation.
+  // We provide mock implementation here to not break the frontend UI.
+  async getReferences(): Promise<any> {
+    return {
+      data: [
+        { id: '1', name: 'Teman' },
+        { id: '2', name: 'Media Sosial' },
+        { id: '3', name: 'Iklan' },
+        { id: '4', name: 'Pencarian Web' },
+        { id: '5', name: 'Lainnya' }
+      ]
+    };
   },
+
+  async getInterests(): Promise<any> {
+    return {
+      data: [
+        { id: '1', name: 'Web Development', category: 'Teknologi' },
+        { id: '2', name: 'Startup', category: 'Bisnis' },
+        { id: '3', name: 'Desain Grafis', category: 'Seni' },
+        { id: '4', name: 'Digital Marketing', category: 'Bisnis' },
+        { id: '5', name: 'Data Science', category: 'Teknologi' }
+      ]
+    };
+  }
 };
 
 export default OnboardingService;

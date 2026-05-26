@@ -10,12 +10,12 @@ export const AuthService = {
   /**
    * Login with username and password
    */
-  async login(username: string, password: string): Promise<any> {
-    const response = await apiClient.post('/login', { username, password });
+  async login(email: string, password: string): Promise<any> {
+    const response = await apiClient.post('/auth/login', { email, password });
     const data = response.data;
     
     // Check multiple possible paths for the token (matching original logic)
-    const token = data.token || data.access_token || data?.data?.token;
+    const token = data.accessToken || data.token || data.access_token || data?.data?.token;
     
     if (token) {
       await SecureStore.setItemAsync(CONFIG.AUTH_TOKEN_KEY, token);
@@ -33,11 +33,9 @@ export const AuthService = {
     email: string; 
     password: string; 
     name: string; 
-    company: string; 
-    phone: string; 
-    nik: string; 
+    username: string;
   }): Promise<any> {
-    const response = await apiClient.post('/register', data);
+    const response = await apiClient.post('/auth/register', data);
     return response.data;
   },
 
@@ -55,18 +53,41 @@ export const AuthService = {
     const token = await SecureStore.getItemAsync(CONFIG.AUTH_TOKEN_KEY);
     if (!token) return null;
     
-    const payload = TokenUtils.decode(token);
-    if (!payload) return null;
-    
-    return {
-      id: payload.id,
-      name: payload.name || payload.username || 'User',
-      username: payload.username,
-      email: payload.email,
-      position: payload.position || payload.role,
-      avatar: payload.avatar || payload.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
-      nik: payload.nik,
-    };
+    try {
+      const response = await apiClient.get('/users/me');
+      return response.data;
+    } catch (error) {
+      // Fallback to token decode if API fails
+      const payload = TokenUtils.decode(token);
+      if (!payload) return null;
+      
+      return {
+        id: payload.sub || payload.id,
+        name: payload.name || payload.username || 'User',
+        username: payload.username,
+        email: payload.email,
+        position: payload.position || payload.role,
+        avatar: payload.avatar || payload.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
+        nik: payload.nik,
+      };
+    }
+  },
+
+  /**
+   * Update current user info
+   */
+  async updateCurrentUser(data: Partial<{
+    email: string;
+    name: string;
+    username: string;
+    company: string;
+    phone: string;
+    nik: string;
+    avatar: string;
+    position: string;
+  }>) {
+    const response = await apiClient.patch('/users/me', data);
+    return response.data;
   },
 
   /**

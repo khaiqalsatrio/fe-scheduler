@@ -45,7 +45,7 @@ export const useChatSocket = (conversationId: string) => {
       });
 
       newSocket.on('connect_error', (err) => {
-        console.error('Socket connection error:', err);
+        console.warn('Socket connection error:', err.message);
       });
     };
 

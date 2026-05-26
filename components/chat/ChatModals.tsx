@@ -40,21 +40,21 @@ export const DeleteConversationModal: React.FC<DeleteModalProps> = ({
         <View style={styles.modalOverlay}>
           <Animated.View style={[
             styles.modalContent,
-            { 
+            {
               opacity: anim,
-              transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
+              transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }]
             }
           ]}>
             <TouchableWithoutFeedback>
               <View>
                 <Text style={styles.modalTitle}>Hapus Percakapan</Text>
                 <Text style={styles.modalMessage}>Hapus percakapan terpilih secara permanen?</Text>
-                
+
                 <View style={styles.modalActionContainer}>
                   <TouchableOpacity onPress={onClose} style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
                     <Text style={styles.modalActionText}>BATAL</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity onPress={onConfirm} style={styles.modalDeleteButton}>
                     <Text style={styles.modalDeleteText}>HAPUS</Text>
                   </TouchableOpacity>
@@ -108,15 +108,15 @@ export const MuteOptionsModal: React.FC<MuteModalProps> = ({
         <View style={styles.modalOverlay}>
           <Animated.View style={[
             styles.modalContent,
-            { 
+            {
               opacity: anim,
-              transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
+              transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }]
             }
           ]}>
             <TouchableWithoutFeedback>
               <View>
                 <Text style={styles.muteModalTitle}>Bisukan notifikasi untuk {selectedCount} chat?</Text>
-                
+
                 <TouchableOpacity style={styles.muteOption} onPress={() => setMuteDuration('8h')}>
                   <View style={[styles.muteRadio, muteDuration === '8h' && styles.muteRadioActive]} />
                   <Text style={styles.muteOptionText}>8 Jam</Text>
@@ -136,7 +136,7 @@ export const MuteOptionsModal: React.FC<MuteModalProps> = ({
                   <TouchableOpacity onPress={onClose} style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
                     <Text style={styles.modalActionText}>BATAL</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity onPress={onConfirm} style={{ paddingHorizontal: 16, paddingVertical: 10, marginLeft: 8 }}>
                     <Text style={styles.modalActionText}>OK</Text>
                   </TouchableOpacity>

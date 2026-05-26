@@ -38,8 +38,7 @@ export const ChatService = {
         isPinned: !!item.pinned_at,
         isMuted: !!item.is_muted,
         isArchived: !!item.is_archived
-      }))
-      .filter((chat) => chat.lastMessage !== "" || chat.unreadCount > 0 || chat.isPinned || chat.isArchived);
+      }));
   },
 
   /**
@@ -146,8 +145,8 @@ export const ChatService = {
    * Search for users (potential recipients)
    */
   async searchUsers(query?: string): Promise<any[]> {
-    const url = query ? `/users/recipients?q=${encodeURIComponent(query)}` : '/users/recipients?limit=100&page=1';
-    const response = await apiClient.get<any[]>(url);
+    // Menggunakan endpoint /users sesuai permintaan
+    const response = await apiClient.get<any[]>('/users');
     const data = response.data;
     return Array.isArray(data) ? data : (data as any).data || [];
   },
@@ -156,15 +155,26 @@ export const ChatService = {
    * Create a new conversation (DM or Group)
    */
   async createConversation(type: 'dm' | 'group', title: string | null, participantIds: string): Promise<any> {
-    const formData = new FormData();
-    formData.append('type', type);
-    if (title) formData.append('title', title);
-    formData.append('participantIds', participantIds);
+    const payload: any = { type };
+    if (title) payload.title = title;
 
-    const response = await apiClient.post('/conversations', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
+    const response = await apiClient.post('/conversations', payload);
+    const conversation = response.data;
+
+    if (participantIds && conversation.id) {
+      const ids = participantIds.split(',');
+      for (const id of ids) {
+        if (id.trim()) {
+          try {
+            await apiClient.post(`/conversations/${conversation.id}/members`, { userId: id.trim(), role: 'member' });
+          } catch (e) {
+            console.warn(`Failed to add member ${id}:`, e);
+          }
+        }
+      }
+    }
+
+    return conversation;
   },
 
   /**

@@ -9,6 +9,8 @@ import { CONFIG } from '../constants/Config';
  * 2. Bearer Token injection from SecureStore
  * 3. Consistent Error Handling
  */
+console.log('🔌 API Client Initialized with Base URL:', CONFIG.API_BASE_URL);
+
 const apiClient = axios.create({
   baseURL: CONFIG.API_BASE_URL,
   headers: {

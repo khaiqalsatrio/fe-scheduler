@@ -42,17 +42,13 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
   };
 
   const handleRegister = async () => {
-    // Fill unique defaults for registration fields not in the mockup UI
-    // Using strict 12-digit phone and 16-digit NIK formats to avoid collisions
-    const randomSuffix = Math.floor(100000000 + Math.random() * 900000000).toString(); // 9 digits
-    const finalPhone = `+628${randomSuffix}`; 
-    const finalNik = `3201${Date.now().toString().slice(-12)}`; // 16 digits total
-    const finalCompany = "Personal / Asset";
-
     if (!fullName) {
       showAlert('Peringatan', 'Harap isi nama lengkap Anda.');
       return;
     }
+
+    // Generate a username from email for registration
+    const username = email.split('@')[0].toLowerCase() + Math.floor(Math.random() * 1000);
 
     setRegLoading(true);
     try {
@@ -60,15 +56,18 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
         email,
         password,
         name: fullName,
-        phone: finalPhone,
-        nik: finalNik,
-        company: finalCompany
+        username
       });
 
-      if (data.status || data.success) {
+      // Backend returns the created user object (with `id`) on success — not {status/success}
+      if (data.id) {
         // IMPORTANT: After successful registration, we MUST login to get the token
-        // so that subsequent onboarding API calls (like /onboarding/profile) are authorized.
-        await AuthService.login(email, password);
+        // so that subsequent onboarding API calls are authorized.
+        const loginResult = await AuthService.login(email, password);
+        if (!loginResult?.token) {
+          showAlert('Error', 'Registrasi berhasil tapi gagal login otomatis. Coba login manual.');
+          return false;
+        }
         return true;
       } else {
         showAlert('Pendaftaran Gagal', data.message || 'Mohon coba data lain.');
@@ -93,10 +92,13 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
     try {
       if (isRegistering) {
         const registered = await handleRegister();
-        if (!registered) return;
+        if (!registered) {
+          setOnboardingLoading(false);
+          return;
+        }
       }
       
-      await OnboardingService.saveStep1({ name: fullName, position: role, avatar });
+      await AuthService.updateCurrentUser({ name: fullName, position: role, avatar });
       await fetchOnboardingData();
       setStep(3);
     } catch (error) {
@@ -112,15 +114,8 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
       return;
     }
 
-    setOnboardingLoading(true);
-    try {
-      await OnboardingService.saveStep2(selectedReferences);
-      setStep(4);
-    } catch (error) {
-      showAlert('Error', 'Gagal menyimpan referensi.');
-    } finally {
-      setOnboardingLoading(false);
-    }
+    // Since the API requires references and interests together, we just move to the next step
+    setStep(4);
   };
 
   const handleSaveInterests = async () => {
@@ -140,7 +135,17 @@ export const useOnboardingFlow = (email: string, password: string, onSuccess: ()
 
     setOnboardingLoading(true);
     try {
-      await OnboardingService.saveStep3(mappedInterests);
+      // Find the names of selected references instead of IDs for the API (if selectedReferences contains IDs)
+      const referenceNames = selectedReferences.map(id => {
+        const ref = references.find(r => r.id === id);
+        return ref ? ref.name : id;
+      });
+
+      await OnboardingService.submitOnboarding({
+        references: referenceNames,
+        interests: mappedInterests
+      });
+      
       setStep(5);
       setTimeout(() => {
         router.replace('/(tabs)/chats');

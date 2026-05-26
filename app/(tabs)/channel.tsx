@@ -1,6 +1,7 @@
-import React from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, Platform, StatusBar, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, Platform, StatusBar, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { MessageCircle, Users, Hash } from 'lucide-react-native';
+import { ChannelService } from '../../services/channelService';
 
 interface ChannelItemProps {
   id: string;
@@ -14,79 +15,6 @@ interface ChannelItemProps {
   emoji: string;
   color: string;
 }
-
-const CHANNELS: ChannelItemProps[] = [
-  {
-    id: '1',
-    title: 'Move & Energy',
-    category: 'Olah Raga',
-    lastMessage: 'Besok pagi ada yang mau joggi...',
-    time: '15:20',
-    joined: true,
-    memberCount: 45,
-    unreadCount: 3,
-    emoji: '🏃',
-    color: '#E0F2FE',
-  },
-  {
-    id: '2',
-    title: 'Culinary & Art',
-    category: 'Olah Rasa',
-    lastMessage: 'Ada rekomendasi tempat maka...',
-    time: '14:45',
-    joined: true,
-    memberCount: 68,
-    unreadCount: 5,
-    emoji: '🎨',
-    color: '#FEE2E2',
-  },
-  {
-    id: '3',
-    title: 'Mind & Purpose',
-    category: 'Olah Ruh',
-    lastMessage: 'Insight terbesar kalian dari event ...',
-    time: '13:30',
-    joined: false,
-    memberCount: 52,
-    emoji: '🧠',
-    color: '#F3E8FF',
-  },
-  {
-    id: '4',
-    title: 'Networking Circle',
-    category: 'Olah Relasi',
-    lastMessage: 'Ada yang dari Telkom regional?',
-    time: '12:15',
-    joined: true,
-    memberCount: 120,
-    unreadCount: 8,
-    emoji: '🤝',
-    color: '#FEF3C7',
-  },
-  {
-    id: '5',
-    title: 'AI in Action',
-    category: 'GenAI & ML Discussion',
-    lastMessage: 'Use case AI apa yang paling im...',
-    time: '11:50',
-    joined: true,
-    memberCount: 95,
-    unreadCount: 2,
-    emoji: '🤖',
-    color: '#E0F2FE',
-  },
-  {
-    id: '6',
-    title: 'Data Talks',
-    category: 'Data Engineering & Analytics',
-    lastMessage: 'Masalah terbesar di data kalian a...',
-    time: '10:30',
-    joined: false,
-    memberCount: 78,
-    emoji: '📊',
-    color: '#DCFCE7',
-  },
-];
 
 const ChannelCard = ({ item }: { item: ChannelItemProps }) => (
   <TouchableOpacity style={styles.channelItem}>
@@ -129,6 +57,68 @@ const ChannelCard = ({ item }: { item: ChannelItemProps }) => (
 );
 
 export default function ChannelScreen() {
+  const [channels, setChannels] = useState<ChannelItemProps[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchChannelsData = async () => {
+    try {
+      const [regularRes, recommendedRes] = await Promise.all([
+        ChannelService.getChannels().catch(() => null),
+        ChannelService.getRecommendedChannels().catch(() => null)
+      ]);
+      
+      let mergedData: any[] = [];
+      if (regularRes && regularRes.status && regularRes.data) {
+        mergedData = [...regularRes.data];
+      }
+      if (recommendedRes && recommendedRes.status && recommendedRes.data) {
+        // Gabungkan tanpa duplikat id
+        recommendedRes.data.forEach(item => {
+          if (!mergedData.find(x => x.id === item.id)) {
+            mergedData.push(item);
+          }
+        });
+      }
+
+      const mappedData = mergedData.map(item => ({
+        id: item.id || Math.random().toString(),
+        title: item.title || item.name || 'Unnamed Channel',
+        category: item.category || 'General',
+        lastMessage: item.lastMessage || '...',
+        time: item.time || '',
+        joined: item.joined || false,
+        memberCount: item.memberCount || 0,
+        unreadCount: item.unreadCount || 0,
+        emoji: item.emoji || '💬',
+        color: item.color || '#F1F5F9',
+      }));
+      setChannels(mappedData);
+    } catch (error) {
+      console.error('Failed to fetch channels:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChannelsData();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchChannelsData();
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#7C3AED" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -145,13 +135,23 @@ export default function ChannelScreen() {
       </View>
 
       <FlatList
-        data={CHANNELS}
+        data={channels}
         keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7C3AED']} />
+        }
         ListHeaderComponent={() => (
           <View style={styles.infoBox}>
             <MessageCircle size={20} color="#7C3AED" style={styles.infoIcon} />
             <Text style={styles.infoText}>
               Ruang diskusi berbasis minat. Join channel untuk mulai berpartisipasi!
+            </Text>
+          </View>
+        )}
+        ListEmptyComponent={() => (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <Text style={{ color: '#64748B', textAlign: 'center', fontSize: 14 }}>
+              Saat ini belum ada channel yang tersedia.
             </Text>
           </View>
         )}

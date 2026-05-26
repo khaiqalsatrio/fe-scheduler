@@ -26,7 +26,12 @@ export default function NewChatScreen() {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   useEffect(() => {
-    fetchUsers();
+    // Debounce pencarian untuk optimalisasi (500ms)
+    const delayDebounceFn = setTimeout(() => {
+      fetchUsers();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
   const fetchUsers = async () => {
@@ -34,10 +39,10 @@ export default function NewChatScreen() {
     try {
       const data = await ChatService.searchUsers(searchQuery);
       
-      // Mocking additional data tags for design
+      // Menggunakan data dari /users, fallback ke mock jika null untuk estetika UI
       const enhancedData = data.map((item: any, index: number) => ({
         ...item,
-        instansi: index % 3 === 0 ? 'Telkom' : index % 3 === 1 ? 'Bukalapak' : 'Shopee',
+        instansi: item.company || (index % 3 === 0 ? 'Telkom' : index % 3 === 1 ? 'Bukalapak' : 'Shopee'),
         tag: index === 0 ? 'Speaker' : index === 2 ? 'Mentor' : index === 4 || index === 8 ? 'Speaker' : null
       }));
       
@@ -81,7 +86,9 @@ export default function NewChatScreen() {
         });
       } catch (error: any) {
         console.warn('Error starting DM:', error);
-        Alert.alert('Gagal', error.response?.data?.message || 'Gagal memulai chat');
+        const errorMessage = error.response?.data?.message;
+        const alertMessage = Array.isArray(errorMessage) ? errorMessage.join('\\n') : (typeof errorMessage === 'string' ? errorMessage : 'Gagal memulai chat');
+        Alert.alert('Gagal', alertMessage);
       } finally {
         setIsCreatingChat(false);
       }
