@@ -37,16 +37,18 @@ export const ChannelService = {
     try {
       // Fetch from conversations and filter out only those that might be considered "channels" (e.g. groups)
       const response = await apiClient.get('/conversations');
-      const data = response.data.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        category: item.type,
-        time: item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '',
-        joined: true,
-        memberCount: item.members?.length || 0,
-        emoji: '💬',
-        color: '#F1F5F9'
-      }));
+      const data = response.data
+        .filter((item: any) => item.type === 'channel' || item.type === 'group')
+        .map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          category: item.type,
+          time: item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '',
+          joined: true,
+          memberCount: item.members?.length || 0,
+          emoji: '💬',
+          color: '#F1F5F9'
+        }));
       
       return {
         status: true,
@@ -60,20 +62,43 @@ export const ChannelService = {
     }
   },
 
-  /**
-   * Fetches the recommended channels (Mocked/Empty since removed in new API)
-   */
   async getRecommendedChannels(): Promise<ChannelApiResponse> {
     try {
-      // Removed from API docs, return empty
+      const response = await apiClient.get('/channels/recommended');
+      const rawData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      
+      const data = rawData.map((item: any) => ({
+        id: item.id,
+        title: item.title || item.name || 'Recommended Channel',
+        category: item.category || item.type || 'Recommended',
+        time: item.updatedAt ? new Date(item.updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '',
+        joined: false, // by definition, recommended means not joined yet
+        memberCount: item.members?.length || 0,
+        emoji: '🔥',
+        color: '#E0F2FE'
+      }));
+
       return {
         status: true,
         message: 'Success',
-        data: [],
-        meta: { count: 0, page: 1, total_page: 1 }
+        data: data,
+        meta: { count: data.length, page: 1, total_page: 1 }
       };
     } catch (error) {
       console.error('ChannelService (getRecommendedChannels): Error fetching recommended', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Joins a channel by ID
+   */
+  async joinChannel(id: string): Promise<any> {
+    try {
+      const response = await apiClient.post(`/channels/${id}/join`);
+      return response.data;
+    } catch (error) {
+      console.error('ChannelService (joinChannel): Error joining channel', error);
       throw error;
     }
   }

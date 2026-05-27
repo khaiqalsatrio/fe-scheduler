@@ -1,9 +1,10 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, View, Text } from 'react-native';
-import { MessageSquare, Calendar, Users } from 'lucide-react-native';
+import { MessageSquare, Calendar, Users, User } from 'lucide-react-native';
 import { OnboardingProvider, useOnboarding } from '../../context/OnboardingContext';
 import { OnboardingOverlay } from '../../components/onboarding/OnboardingOverlay';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TabIcon = ({ Icon, focused, color }: { Icon: any; focused: boolean; color: string }) => {
   return (
@@ -35,6 +36,9 @@ const GlobalOnboarding = () => {
 };
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
   return (
     <OnboardingProvider>
       <Tabs
@@ -42,7 +46,13 @@ export default function TabLayout() {
           headerShown: false,
           tabBarActiveTintColor: '#065F46', // Dark green for text/icon
           tabBarInactiveTintColor: '#666',
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [
+            styles.tabBar,
+            {
+              height: 60 + insets.bottom,
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+            }
+          ],
           tabBarLabelStyle: styles.tabBarLabel,
         }}>
         <Tabs.Screen
@@ -89,6 +99,22 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="profile_tab"
+          options={{
+            title: 'Profile',
+            tabBarLabel: 'Profile',
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon Icon={User} focused={focused} color={color} />
+            ),
+          }}
+          listeners={() => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              router.push('/profile');
+            },
+          })}
+        />
+        <Tabs.Screen
           name="speakers"
           options={{
             href: null,
@@ -117,8 +143,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0,
     elevation: 10,
-    height: 65,
-    paddingBottom: 10,
     paddingTop: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },

@@ -25,7 +25,7 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
 }) => {
   const router = useRouter();
   const isSelected = selectedChatIds.length > 0;
-  
+
   const selectedChats = chats.filter(c => selectedChatIds.includes(c.id));
   const allPinned = selectedChats.every(c => c.isPinned);
   const allMuted = selectedChats.every(c => c.isMuted);
@@ -42,11 +42,11 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconButton} onPress={onPin}>
-              <Pin 
-                color="#FFF" 
-                size={24} 
+              <Pin
+                color="#FFF"
+                size={24}
                 style={{ transform: [{ rotate: '45deg' }] }}
-                fill={allPinned ? "#FFF" : "transparent"} 
+                fill={allPinned ? "#FFF" : "transparent"}
               />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton} onPress={onMute}>
@@ -71,7 +71,7 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
               source={require('../../assets/images/logo.png')}
               style={styles.logoImage}
             />
-            <Text style={styles.headerTitle}>ChatAja!</Text>
+            <Text style={styles.headerTitle}>Chat</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/profile' as any)}>

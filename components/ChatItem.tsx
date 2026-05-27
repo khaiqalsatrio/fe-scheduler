@@ -88,13 +88,13 @@ export const ChatItem: React.FC<ChatItemProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingLeft: 15,
     alignItems: 'center',
     backgroundColor: '#FFF',
   },
   avatarContainer: {
     position: 'relative',
+    paddingVertical: 12,
   },
   avatar: {
     width: 50,
@@ -121,10 +121,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     marginLeft: 15,
+    paddingRight: 15,
+    paddingVertical: 15,
     justifyContent: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEE',
-    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.08)',
   },
   header: {
     flexDirection: 'row',

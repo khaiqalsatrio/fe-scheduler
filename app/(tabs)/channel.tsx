@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, Platform, StatusBar, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { MessageCircle, Users, Hash } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { ChannelService } from '../../services/channelService';
 
 interface ChannelItemProps {
@@ -16,8 +17,8 @@ interface ChannelItemProps {
   color: string;
 }
 
-const ChannelCard = ({ item }: { item: ChannelItemProps }) => (
-  <TouchableOpacity style={styles.channelItem}>
+const ChannelCard = ({ item, onPress }: { item: ChannelItemProps, onPress?: () => void }) => (
+  <TouchableOpacity style={styles.channelItem} onPress={onPress}>
     <View style={[styles.avatarContainer, { backgroundColor: item.color }]}>
       <Text style={styles.avatarEmoji}>{item.emoji}</Text>
     </View>
@@ -45,7 +46,7 @@ const ChannelCard = ({ item }: { item: ChannelItemProps }) => (
             <Users size={12} color="#94A3B8" />
             <Text style={styles.memberCountText}>{item.memberCount}</Text>
           </View>
-          {item.unreadCount && item.unreadCount > 0 && (
+          {(item.unreadCount ?? 0) > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadText}>{item.unreadCount}</Text>
             </View>
@@ -57,6 +58,7 @@ const ChannelCard = ({ item }: { item: ChannelItemProps }) => (
 );
 
 export default function ChannelScreen() {
+  const router = useRouter();
   const [channels, setChannels] = useState<ChannelItemProps[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -111,6 +113,22 @@ export default function ChannelScreen() {
     fetchChannelsData();
   };
 
+  const handleChannelPress = async (item: ChannelItemProps) => {
+    if (item.joined) {
+      router.push(`/chat/${item.id}`);
+    } else {
+      try {
+        setLoading(true);
+        await ChannelService.joinChannel(item.id);
+        await fetchChannelsData();
+      } catch (error) {
+        console.error('Failed to join channel:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -155,7 +173,7 @@ export default function ChannelScreen() {
             </Text>
           </View>
         )}
-        renderItem={({ item }) => <ChannelCard item={item} />}
+        renderItem={({ item }) => <ChannelCard item={item} onPress={() => handleChannelPress(item)} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
