@@ -10,7 +10,7 @@ export default function MediaScreen() {
   
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -32,55 +32,55 @@ export default function MediaScreen() {
   const handleGenerateRecap = async () => {
     if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
     try {
-      setActionLoading(true);
+      setActionLoading('1');
       const result = await DocumentService.generateRecap([documents[0].id], 'Minta tolong buatkan rekap dari presentasi narasumber');
       Alert.alert('Sukses', `Recap berhasil dibuat:\n\n${result.result}`);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Gagal membuat rekap.');
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
   const handleGenerateReport = async () => {
     if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
     try {
-      setActionLoading(true);
+      setActionLoading('2');
       const result = await DocumentService.generateReport([documents[0].id], 'Buatkan laporan kegiatan hari ini');
       Alert.alert('Sukses', `Laporan berhasil dibuat:\n\n${result.result}`);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Gagal membuat laporan.');
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
   const handleGenerateMom = async () => {
     if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
     try {
-      setActionLoading(true);
+      setActionLoading('3');
       const result = await DocumentService.generateMom([documents[0].id], 'Tolong buatkan MoM dari diskusi tim');
       Alert.alert('Sukses', `MoM berhasil dibuat:\n\n${result.result}`);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Gagal membuat MoM.');
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
   const handleAskAgent = async () => {
     try {
-      setActionLoading(true);
+      setActionLoading('ask-agent');
       const res = await DocumentService.askAgent('Tolong cari dokumen tentang rekap kegiatan bulan lalu');
       Alert.alert('Agent', res.answer);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Gagal menghubungi agent.');
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
 
@@ -145,9 +145,16 @@ export default function MediaScreen() {
         style={styles.searchContainer}
         activeOpacity={0.8}
         onPress={handleAskAgent}
+        disabled={!!actionLoading}
       >
-        <Search color="#9CA3AF" size={18} />
-        <Text style={styles.searchText}>Ask ChatAja Agent</Text>
+        {actionLoading === 'ask-agent' ? (
+          <ActivityIndicator size="small" color="#9CA3AF" />
+        ) : (
+          <Search color="#9CA3AF" size={18} />
+        )}
+        <Text style={styles.searchText}>
+          {actionLoading === 'ask-agent' ? 'Agent sedang berpikir...' : 'Ask ChatAja Agent'}
+        </Text>
       </TouchableOpacity>
       
       <ScrollView>
@@ -193,10 +200,16 @@ export default function MediaScreen() {
                 key={action.id} 
                 style={[styles.actionItem, index !== actions.length - 1 && styles.actionItemBorder]}
                 onPress={action.onPress}
-                disabled={actionLoading}
+                disabled={!!actionLoading}
               >
-                <Icon color="#E06B32" size={18} style={styles.actionIcon} />
-                <Text style={styles.actionText}>{action.title}</Text>
+                {actionLoading === action.id ? (
+                  <ActivityIndicator size="small" color="#E06B32" style={styles.actionIcon} />
+                ) : (
+                  <Icon color="#E06B32" size={18} style={styles.actionIcon} />
+                )}
+                <Text style={styles.actionText}>
+                  {actionLoading === action.id ? 'Memproses dengan AI...' : action.title}
+                </Text>
               </TouchableOpacity>
             )
           })}
