@@ -1,22 +1,128 @@
-import { StyleSheet, View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView } from 'react-native';
-import React from 'react';
-import { Search, MoreHorizontal, MoreVertical, Calendar, Gift, Wand2 } from 'lucide-react-native';
+import { StyleSheet, View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Search, MoreHorizontal, MoreVertical, Calendar, Gift, Wand2, Upload } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DocumentService, Document } from '../../services/documentService';
+import * as DocumentPicker from 'expo-document-picker';
 
 export default function MediaScreen() {
   const insets = useSafeAreaInsets();
   
-  const documents = [
-    { id: '1', title: 'Workshop_day1_AICOE', info: '2MB, Modified in Olah Rasio Room by Rafi...' },
-    { id: '2', title: 'Workshop_day1_AICOE', info: '2MB, Modified in Olah Rasio Room by Rafi...' },
-    { id: '3', title: 'Workshop_day1_AICOE', info: '2MB, Modified in Olah Rasio Room by Rafi...' },
-  ];
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true);
+      const docs = await DocumentService.getAllDocuments();
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Failed to fetch documents', error);
+      Alert.alert('Error', 'Gagal mengambil data dokumen.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateRecap = async () => {
+    if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
+    try {
+      setActionLoading(true);
+      const result = await DocumentService.generateRecap([documents[0].id], 'Minta tolong buatkan rekap dari presentasi narasumber');
+      Alert.alert('Sukses', `Recap berhasil dibuat:\n\n${result.result}`);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Gagal membuat rekap.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
+    try {
+      setActionLoading(true);
+      const result = await DocumentService.generateReport([documents[0].id], 'Buatkan laporan kegiatan hari ini');
+      Alert.alert('Sukses', `Laporan berhasil dibuat:\n\n${result.result}`);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Gagal membuat laporan.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleGenerateMom = async () => {
+    if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
+    try {
+      setActionLoading(true);
+      const result = await DocumentService.generateMom([documents[0].id], 'Tolong buatkan MoM dari diskusi tim');
+      Alert.alert('Sukses', `MoM berhasil dibuat:\n\n${result.result}`);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Gagal membuat MoM.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAskAgent = async () => {
+    try {
+      setActionLoading(true);
+      const res = await DocumentService.askAgent('Tolong cari dokumen tentang rekap kegiatan bulan lalu');
+      Alert.alert('Agent', res.answer);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Gagal menghubungi agent.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        setLoading(true);
+        await DocumentService.uploadDocument(
+          file.uri,
+          file.name,
+          file.mimeType || 'application/pdf',
+          file.name.split('.')[0],
+          'Mobile Upload'
+        );
+        Alert.alert('Sukses', 'Dokumen berhasil diupload');
+        fetchDocuments();
+      }
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      Alert.alert('Error', 'Gagal mengupload dokumen.');
+      setLoading(false);
+    }
+  };
 
   const actions = [
-    { id: '1', title: 'Rekap presentasi narasumber', icon: Calendar },
-    { id: '2', title: 'Buatkan laporan kegiatan', icon: Gift },
-    { id: '3', title: 'Buatkan MoM diskusi', icon: Wand2 },
+    { id: '1', title: 'Rekap presentasi narasumber', icon: Calendar, onPress: handleGenerateRecap },
+    { id: '2', title: 'Buatkan laporan kegiatan', icon: Gift, onPress: handleGenerateReport },
+    { id: '3', title: 'Buatkan MoM diskusi', icon: Wand2, onPress: handleGenerateMom },
   ];
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -38,6 +144,7 @@ export default function MediaScreen() {
       <TouchableOpacity 
         style={styles.searchContainer}
         activeOpacity={0.8}
+        onPress={handleAskAgent}
       >
         <Search color="#9CA3AF" size={18} />
         <Text style={styles.searchText}>Ask ChatAja Agent</Text>
@@ -46,14 +153,28 @@ export default function MediaScreen() {
       <ScrollView>
         {/* Document List */}
         <View style={styles.docList}>
-          {documents.map((doc) => (
+          <View style={styles.listHeader}>
+            <Text style={styles.sectionTitleList}>Dokumen Anda</Text>
+            <TouchableOpacity onPress={handleUpload} style={styles.uploadBtn}>
+               <Upload color="#E06B32" size={16} />
+               <Text style={styles.uploadText}>Upload</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator size="large" color="#E06B32" style={{ marginVertical: 20 }} />
+          ) : documents.length === 0 ? (
+             <Text style={styles.emptyText}>Tidak ada dokumen.</Text>
+          ) : documents.map((doc) => (
             <View key={doc.id} style={styles.docItem}>
               <View style={styles.pdfIconContainer}>
-                <Text style={styles.pdfIconText}>PDF</Text>
+                <Text style={styles.pdfIconText}>{doc.file_type?.includes('pdf') ? 'PDF' : 'DOC'}</Text>
               </View>
               <View style={styles.docInfo}>
                 <Text style={styles.docTitle}>{doc.title}</Text>
-                <Text style={styles.docSubtitle} numberOfLines={1}>{doc.info}</Text>
+                <Text style={styles.docSubtitle} numberOfLines={1}>
+                  {formatFileSize(doc.file_size)}, Modified {doc.location ? `in ${doc.location} ` : ''}by {doc.modifiedBy?.name || 'Unknown'}
+                </Text>
               </View>
               <TouchableOpacity style={styles.docMoreBtn}>
                 <MoreVertical color="#000" size={18} />
@@ -68,7 +189,12 @@ export default function MediaScreen() {
           {actions.map((action, index) => {
             const Icon = action.icon;
             return (
-              <TouchableOpacity key={action.id} style={[styles.actionItem, index !== actions.length - 1 && styles.actionItemBorder]}>
+              <TouchableOpacity 
+                key={action.id} 
+                style={[styles.actionItem, index !== actions.length - 1 && styles.actionItemBorder]}
+                onPress={action.onPress}
+                disabled={actionLoading}
+              >
                 <Icon color="#E06B32" size={18} style={styles.actionIcon} />
                 <Text style={styles.actionText}>{action.title}</Text>
               </TouchableOpacity>
@@ -81,6 +207,7 @@ export default function MediaScreen() {
       <TouchableOpacity 
         style={styles.floatingMascot} 
         activeOpacity={0.8}
+        onPress={handleAskAgent}
       >
         <Image
           source={require('../../assets/images/Adobe Express - file (11) 1.png')}
@@ -146,6 +273,37 @@ const styles = StyleSheet.create({
   docList: {
     paddingHorizontal: 16,
     marginBottom: 10,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitleList: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF0E6',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  uploadText: {
+    color: '#E06B32',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    marginVertical: 20,
+    fontSize: 14,
   },
   docItem: {
     flexDirection: 'row',
