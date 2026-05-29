@@ -22,7 +22,7 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
   const [hasMore, setHasMore] = useState(true);
   const [oldestCursor, setOldestCursor] = useState<string | null>(null);
   const [isAiThinking, setIsAiThinking] = useState(false);
-  const [chatType, setChatType] = useState<'dm' | 'group'>('dm');
+  const [chatType, setChatType] = useState<'dm' | 'group' | 'channel'>('dm');
   const [memberCount, setMemberCount] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
 
@@ -163,7 +163,7 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
       if (conversationInfo) {
         setChatType(conversationInfo.type);
         setIsMuted(!!conversationInfo.is_muted);
-        if (conversationInfo.type === 'group') {
+        if (conversationInfo.type === 'group' || conversationInfo.type === 'channel') {
           const members = await MessageService.getMembers(conversationId);
           setMemberCount(members.length);
         }

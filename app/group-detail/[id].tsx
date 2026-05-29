@@ -7,7 +7,7 @@ import { AuthService } from '../../services/authService';
 import { ConfirmModal } from '../../components/ConfirmModal';
 
 export default function GroupDetailScreen() {
-  const { id, title } = useLocalSearchParams();
+  const { id, title, type } = useLocalSearchParams();
   const router = useRouter();
   
   const [members, setMembers] = useState<any[]>([]);
@@ -106,7 +106,11 @@ export default function GroupDetailScreen() {
     try {
       setIsLoading(true);
       await ChatService.removeMember(id as string, currentUser.id); 
-      router.replace('/(tabs)/chats');
+      if (type === 'channel') {
+        router.replace('/(tabs)/channel' as any);
+      } else {
+        router.replace('/(tabs)/chats');
+      }
     } catch (error) {
       Alert.alert('Error', 'Gagal keluar grup.');
     } finally {
@@ -165,7 +169,7 @@ export default function GroupDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color="#00A884" size={28} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Info grup</Text>
+        <Text style={styles.headerTitle}>{type === 'channel' ? 'Info Channel' : 'Info Grup'}</Text>
       </View>
 
       <FlatList
@@ -202,7 +206,7 @@ export default function GroupDetailScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
-                <Text style={styles.memberSubtitle}>Grup · {members.length} Anggota</Text>
+                <Text style={styles.memberSubtitle}>{type === 'channel' ? 'Channel' : 'Grup'} · {members.length} Anggota</Text>
               </View>
             </View>
 
@@ -250,7 +254,7 @@ export default function GroupDetailScreen() {
           <View style={styles.footer}>
             <TouchableOpacity style={styles.leaveRow} onPress={handleLeaveGroup}>
               <LogOut color="#FF3B30" size={22} />
-              <Text style={styles.leaveText}>Keluar grup</Text>
+              <Text style={styles.leaveText}>{type === 'channel' ? 'Keluar Channel' : 'Keluar Grup'}</Text>
             </TouchableOpacity>
             <View style={{ height: 50 }} />
           </View>
@@ -263,8 +267,8 @@ export default function GroupDetailScreen() {
         visible={isLeaveModalVisible}
         onClose={() => setIsLeaveModalVisible(false)}
         onConfirm={confirmLeaveGroup}
-        title="Keluar Grup"
-        message="Apakah Anda yakin ingin keluar dari grup ini?"
+        title={type === 'channel' ? "Keluar Channel" : "Keluar Grup"}
+        message={`Apakah Anda yakin ingin keluar dari ${type === 'channel' ? 'channel' : 'grup'} ini?`}
         confirmText="Keluar"
         type="destructive"
       />
@@ -277,7 +281,7 @@ export default function GroupDetailScreen() {
         }}
         onConfirm={confirmRemoveMember}
         title="Hapus Anggota"
-        message={`Apakah Anda yakin ingin menghapus ${memberToRemove?.name} dari grup ini?`}
+        message={`Apakah Anda yakin ingin menghapus ${memberToRemove?.name} dari ${type === 'channel' ? 'channel' : 'grup'} ini?`}
         confirmText="Hapus"
         type="destructive"
       />

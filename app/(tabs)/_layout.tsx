@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, View, Text } from 'react-native';
-import { MessageSquare, Calendar, Users, User } from 'lucide-react-native';
+import { MessageSquare, Calendar, Users, User, FileText } from 'lucide-react-native';
 import { OnboardingProvider, useOnboarding } from '../../context/OnboardingContext';
 import { OnboardingOverlay } from '../../components/onboarding/OnboardingOverlay';
 import { useRouter } from 'expo-router';
@@ -20,7 +20,7 @@ const TabIcon = ({ Icon, focused, color }: { Icon: any; focused: boolean; color:
 const GlobalOnboarding = () => {
   const router = useRouter();
   const onboardingState = useOnboarding();
-  
+
   return (
     <OnboardingOverlay
       step={onboardingState.step}
@@ -95,6 +95,16 @@ export default function TabLayout() {
             tabBarLabel: 'Kegiatan',
             tabBarIcon: ({ focused, color }) => (
               <TabIcon Icon={Calendar} focused={focused} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="media"
+          options={{
+            title: 'Media',
+            tabBarLabel: 'Media',
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon Icon={FileText} focused={focused} color={color} />
             ),
           }}
         />

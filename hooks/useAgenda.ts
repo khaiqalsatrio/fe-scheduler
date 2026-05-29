@@ -11,7 +11,42 @@ export interface Activity {
   location: string;
   speaker?: string;
   isUserItem?: boolean;
+  status?: string;
 }
+
+const MOCK_ITEMS: AgendaItem[] = [
+  {
+    id: 'mock-1',
+    event_id: '3fe7ae15-f034-4006-ad45-e7d2607787b1',
+    title: 'Sarapan: Bubur Ayam H.Aceng',
+    start_at: '2026-04-11T08:00:00Z',
+    end_at: '2026-04-11T09:00:00Z',
+    location: 'Geger Kalong Hilir',
+    status: 'saran_ai',
+    order_index: 1,
+  },
+  {
+    id: 'mock-2',
+    event_id: '3fe7ae15-f034-4006-ad45-e7d2607787b1',
+    title: 'Panel Discussion: AI in Enterprise',
+    start_at: '2026-04-11T09:00:00Z',
+    end_at: '2026-04-11T10:00:00Z',
+    location: 'Main Hall',
+    speaker: 'Multiple Speakers',
+    status: 'penting',
+    order_index: 2,
+  },
+  {
+    id: 'mock-3',
+    event_id: '3fe7ae15-f034-4006-ad45-e7d2607787b1',
+    title: 'Networking Session',
+    start_at: '2026-04-11T10:00:00Z',
+    end_at: '2026-04-11T11:00:00Z',
+    location: 'Garden Area',
+    status: 'kurang_relevan',
+    order_index: 3,
+  }
+];
 
 export const useAgenda = () => {
   const [agendas, setAgendas] = useState<AgendaItem[]>([]);
@@ -31,11 +66,22 @@ export const useAgenda = () => {
     try {
       const response = await agendaService.getAgendas({ limit: 50 });
       if (response.status) {
-        setAgendas(response.data);
+        const dbItems = response.data;
+        const merged = [...dbItems];
+        
+        // Add mock items if they don't already exist by title in database
+        MOCK_ITEMS.forEach(mock => {
+          if (!dbItems.some(item => item.title.toLowerCase() === mock.title.toLowerCase())) {
+            merged.push(mock);
+          }
+        });
+        setAgendas(merged);
       } else {
+        setAgendas(MOCK_ITEMS);
         setError(response.message || 'Gagal mengambil data agenda');
       }
     } catch (err: any) {
+      setAgendas(MOCK_ITEMS);
       setError('Terjadi kesalahan koneksi ke server');
       console.error(err);
     } finally {
@@ -98,6 +144,11 @@ export const useAgenda = () => {
 
   const deleteAgenda = async (id: string) => {
     try {
+      if (id.startsWith('mock-')) {
+        // Handle mock deletion locally
+        setAgendas(prev => prev.filter(item => item.id !== id));
+        return true;
+      }
       await agendaService.deleteAgenda(id);
       fetchAgendas();
       return true;
@@ -127,7 +178,8 @@ export const useAgenda = () => {
         title: item.title,
         location: item.location || 'Lokasi tidak tersedia',
         speaker: item.speaker,
-        isUserItem: item.status === 'pending'
+        isUserItem: item.status === 'pending',
+        status: item.status
       });
     });
 
@@ -143,6 +195,8 @@ export const useAgenda = () => {
     error,
     fetchAgendas,
     saveActivity,
-    deleteAgenda
+    deleteAgenda,
+    setAgendas
   };
 };
+

@@ -35,9 +35,10 @@ export const ChannelService = {
    */
   async getChannels(): Promise<ChannelApiResponse> {
     try {
-      // Fetch from conversations and filter out only those that might be considered "channels" (e.g. groups)
-      const response = await apiClient.get('/conversations');
-      const data = response.data
+      // Fetch from conversations with type=channel
+      const response = await apiClient.get('/conversations?type=channel');
+      const rawData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      const data = rawData
         .filter((item: any) => item.type === 'channel' || item.type === 'group')
         .map((item: any) => ({
           id: item.id,

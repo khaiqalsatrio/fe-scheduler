@@ -33,7 +33,7 @@ interface MessageBubbleProps {
   onReactionPress?: (emoji: string) => void;
   isDeleted?: boolean;
   senderName?: string;
-  chatType?: 'dm' | 'group';
+  chatType?: 'dm' | 'group' | 'channel';
 }
 
 export const MessageBubble = memo(({
@@ -159,7 +159,7 @@ export const MessageBubble = memo(({
 
   return (
     <View style={[styles.outerContainer, isMine ? styles.myOuterContainer : styles.theirOuterContainer]}>
-      {!isMine && chatType === 'group' && senderName && !isDeleted && (
+      {!isMine && (chatType === 'group' || chatType === 'channel') && senderName && !isDeleted && (
         <View style={styles.senderNameContainer}>
           {senderName === 'Tera AI' && <Sparkles color="#A855F7" size={10} style={{ marginRight: 4 }} />}
           <Text style={[styles.senderNameText, senderName === 'Tera AI' && styles.teraNameText]}>

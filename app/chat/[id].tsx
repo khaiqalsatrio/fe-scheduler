@@ -373,15 +373,15 @@ export default function ChatDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.headerInfo} 
-              disabled={chatType !== 'group'} 
-              onPress={() => router.push({ pathname: '/group-detail/[id]' as any, params: { id: id as string, title: name as string } })}
+              disabled={chatType !== 'group' && chatType !== 'channel'} 
+              onPress={() => router.push({ pathname: '/group-detail/[id]' as any, params: { id: id as string, title: name as string, type: chatType } })}
             >
-              <View style={[styles.headerAvatar, chatType === 'group' && { backgroundColor: '#E0EEFF' }]}>
-                {chatType === 'group' ? <Users color="#3B82F6" size={22} /> : <User color="#999" size={22} />}
+              <View style={[styles.headerAvatar, (chatType === 'group' || chatType === 'channel') && { backgroundColor: '#E0EEFF' }]}>
+                {(chatType === 'group' || chatType === 'channel') ? <Users color="#3B82F6" size={22} /> : <User color="#999" size={22} />}
               </View>
               <View style={styles.headerTextContainer}>
                 <Text style={styles.headerTitle} numberOfLines={1}>{name as string || 'Chat'}</Text>
-                <Text style={styles.headerSubtitle}>{chatType === 'group' ? `${memberCount} Anggota` : 'Last seen recently'}</Text>
+                <Text style={styles.headerSubtitle}>{(chatType === 'group' || chatType === 'channel') ? `${memberCount} Anggota` : 'Last seen recently'}</Text>
               </View>
             </TouchableOpacity>
             <View style={styles.headerActions}>

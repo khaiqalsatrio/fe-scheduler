@@ -33,11 +33,12 @@ export const formatLocalTime = (isoStr?: string) => {
  * Extracts a label like "9 AM" from an ISO string
  */
 export const getHourLabel = (dateStr?: string) => {
-  if (!dateStr) return '9 AM';
+  if (!dateStr) return '09 AM';
   const date = new Date(dateStr);
   let hours = date.getUTCHours();
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
   hours = hours ? hours : 12;
-  return `${hours} ${ampm}`;
+  return `${hours.toString().padStart(2, '0')} ${ampm}`;
 };
+

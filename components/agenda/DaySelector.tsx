@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface Day {
   id: number;
   label: string;
+  date: string;
 }
 
 interface DaySelectorProps {
@@ -14,59 +15,80 @@ interface DaySelectorProps {
 
 export const DaySelector: React.FC<DaySelectorProps> = ({ days, selectedDay, onSelectDay }) => {
   return (
-    <View style={styles.daySelectorContainer}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        contentContainerStyle={styles.daySelectorContent}
-      >
-        {days.map((day) => (
-          <TouchableOpacity
-            key={day.id}
-            onPress={() => onSelectDay(day.id)}
-            style={[
-              styles.dayTab,
-              selectedDay === day.id && styles.dayTabActive
-            ]}>
-            <Text style={[
-              styles.dayTabText,
-              selectedDay === day.id && styles.dayTabTextActive
-            ]}>
-              {day.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+    <View style={styles.container}>
+      <View style={styles.row}>
+        {days.map((day) => {
+          const isActive = selectedDay === day.id;
+          return (
+            <TouchableOpacity
+              key={day.id}
+              onPress={() => onSelectDay(day.id)}
+              style={[
+                styles.dayTab,
+                isActive && styles.dayTabActive
+              ]}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.dayLabel,
+                isActive && styles.dayLabelActive
+              ]}>
+                {day.label}
+              </Text>
+              <Text style={[
+                styles.dayDate,
+                isActive && styles.dayDateActive
+              ]}>
+                {day.date}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  daySelectorContainer: {
-    marginBottom: 16,
+  container: {
+    backgroundColor: '#FFF',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  daySelectorContent: {
-    paddingHorizontal: 24,
-    gap: 12,
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   dayTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E1E4E8',
-    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
   },
   dayTabActive: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#81C784',
+    backgroundColor: '#10B981', // Emerald green from screenshot
   },
-  dayTabText: {
-    fontSize: 15,
+  dayLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#666',
+    color: '#6B7280',
+    marginBottom: 4,
   },
-  dayTabTextActive: {
-    color: '#2E7D32',
+  dayLabelActive: {
+    color: '#FFF',
+  },
+  dayDate: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  dayDateActive: {
+    color: '#FFF',
   },
 });
+

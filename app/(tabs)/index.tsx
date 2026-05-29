@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import AuthService from '../../services/authService';
+import OnboardingService from '../../services/onboardingService';
 
 // Modular Components
 import { OnboardingHero } from '../../components/onboarding/OnboardingHero';
@@ -80,8 +81,16 @@ export default function OnboardingScreen() {
 
       if (data.token) {
         setIsRegistering(false);
-        // Jika sudah mendaftar (berhasil login), langsung masuk ke chats tanpa perlu cek isOnboarded
-        router.replace('/(tabs)/chats');
+        // Cek apakah user sudah mengisi onboarding
+        const onboardingData = await OnboardingService.getOnboarding();
+        if (onboardingData && onboardingData.id) {
+          router.replace('/(tabs)/chats');
+        } else {
+          // Lanjut onboarding jika belum
+          onboardingState.prepareOnboarding(email, password);
+          onboardingState.setIsRegistering(false);
+          onboardingState.setStep(2);
+        }
       } else {
         const msg = String(data.message || '').toLowerCase();
         if (

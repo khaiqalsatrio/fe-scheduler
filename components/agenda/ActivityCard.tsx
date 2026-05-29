@@ -1,83 +1,306 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { MapPin, User, X } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { MapPin, User, X, Sparkle } from 'lucide-react-native';
 import { Activity } from '../../hooks/useAgenda';
 
 interface ActivityCardProps {
   activity: Activity;
   onDelete: (id: string) => void;
+  onAddSuggestion?: (activity: Activity) => void;
+  onDismissSuggestion?: (id: string) => void;
+  onReplaceSuggestion?: (activity: Activity) => void;
 }
 
-export const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onDelete }) => {
+export const ActivityCard: React.FC<ActivityCardProps> = ({
+  activity,
+  onDelete,
+  onAddSuggestion,
+  onDismissSuggestion,
+  onReplaceSuggestion,
+}) => {
+  const isSaranAI = activity.status === 'saran_ai';
+  const isPenting = activity.status === 'penting';
+  const isKurangRelevan = activity.status === 'kurang_relevan';
+
+  const getCardStyle = () => {
+    if (isSaranAI) return styles.cardSaranAI;
+    if (isPenting) return styles.cardPenting;
+    if (isKurangRelevan) return styles.cardKurangRelevan;
+    return activity.isUserItem ? styles.cardUser : styles.cardDefault;
+  };
+
+  const getBadge = () => {
+    if (isSaranAI) {
+      return (
+        <View style={styles.badgeSaranAI}>
+          <Sparkle size={10} color="#9333EA" fill="#9333EA" />
+          <Text style={styles.badgeTextSaranAI}>Saran AI</Text>
+        </View>
+      );
+    }
+    if (isPenting) {
+      return (
+        <View style={styles.badgePenting}>
+          <Text style={styles.badgeTextPenting}>Penting</Text>
+        </View>
+      );
+    }
+    if (isKurangRelevan) {
+      return (
+        <View style={styles.badgeKurangRelevan}>
+          <Text style={styles.badgeTextKurangRelevan}>Kurang relevan</Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
   return (
-    <View style={[
-      styles.activityCard,
-      activity.isUserItem && styles.activityCardUser
-    ]}>
-      <View style={styles.activityCardContent}>
-        <View style={styles.activityHeader}>
-          <Text style={styles.activityTime}>{activity.time}</Text>
-          {activity.isUserItem && (
-            <TouchableOpacity onPress={() => onDelete(activity.id)}>
-              <X size={16} color="#EF4444" />
+    <View style={[styles.cardBase, getCardStyle()]}>
+      <View style={styles.cardContent}>
+        {/* Header containing Time and Badge */}
+        <View style={styles.headerRow}>
+          <View style={styles.timeBadgeContainer}>
+            <Text
+              style={[
+                styles.timeText,
+                isSaranAI && styles.timeTextSaranAI,
+                isPenting && styles.timeTextPenting,
+                isKurangRelevan && styles.timeTextKurangRelevan,
+              ]}
+            >
+              {activity.time}
+            </Text>
+            {getBadge()}
+          </View>
+          
+          {/* Delete button for standard user items */}
+          {activity.isUserItem && !isSaranAI && !isPenting && !isKurangRelevan && (
+            <TouchableOpacity onPress={() => onDelete(activity.id)} style={styles.deleteButton}>
+              <X size={16} color="#9CA3AF" />
             </TouchableOpacity>
           )}
         </View>
-        <Text style={styles.activityTitle}>{activity.title}</Text>
-        <View style={styles.activityMeta}>
-          <MapPin size={12} color="#8E99AF" />
-          <Text style={styles.activityMetaText}>{activity.location}</Text>
-        </View>
+
+        {/* Title */}
+        <Text style={styles.titleText}>{activity.title}</Text>
+
+        {/* Location Info */}
+        {activity.location && (
+          <View style={styles.metaRow}>
+            <MapPin size={12} color="#9CA3AF" />
+            <Text style={styles.metaText}>{activity.location}</Text>
+          </View>
+        )}
+
+        {/* Speaker Info (if any) */}
         {activity.speaker && (
-          <View style={[styles.activityMeta, { marginTop: 4 }]}>
-            <User size={12} color="#8E99AF" />
-            <Text style={styles.activityMetaText}>Speaker: {activity.speaker}</Text>
+          <View style={[styles.metaRow, { marginTop: 4 }]}>
+            <User size={12} color="#9CA3AF" />
+            <Text style={styles.metaText}>Speaker: {activity.speaker}</Text>
+          </View>
+        )}
+
+        {/* Saran AI interactive buttons */}
+        {isSaranAI && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => onAddSuggestion && onAddSuggestion(activity)}
+            >
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.gantiButton}
+              onPress={() => onReplaceSuggestion && onReplaceSuggestion(activity)}
+            >
+              <Text style={styles.gantiButtonText}>Ganti Saran</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.dismissButton}
+              onPress={() => onDismissSuggestion && onDismissSuggestion(activity.id)}
+            >
+              <Text style={styles.dismissButtonText}>Dismiss</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
+
+      {/* Mascot decoration for Kurang Relevan card */}
+      {isKurangRelevan && (
+        <Image
+          source={require('../../assets/images/Adobe Express - file (11) 1.png')}
+          style={styles.mascotImage}
+          resizeMode="contain"
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  activityCard: {
-    backgroundColor: '#F0F7FF',
+  cardBase: {
     borderRadius: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-    padding: 12,
+    padding: 14,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  activityCardUser: {
+  cardDefault: {
+    backgroundColor: '#EFF6FF',
+  },
+  cardUser: {
     backgroundColor: '#F0FDF4',
+    borderLeftWidth: 3,
     borderLeftColor: '#22C55E',
   },
-  activityHeader: {
+  cardSaranAI: {
+    backgroundColor: '#F5F3FF',
+  },
+  cardPenting: {
+    backgroundColor: '#EFF6FF',
+  },
+  cardKurangRelevan: {
+    backgroundColor: '#F9FAFB',
+    minHeight: 90,
+  },
+  cardContent: {
+    flex: 1,
+    zIndex: 1,
+  },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 6,
   },
-  activityCardContent: {
-    gap: 4,
+  timeBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  activityTime: {
+  timeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#4B5563',
   },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1C1E',
+  timeTextSaranAI: {
+    color: '#7C3AED',
   },
-  activityMeta: {
+  timeTextPenting: {
+    color: '#1D4ED8',
+  },
+  timeTextKurangRelevan: {
+    color: '#6B7280',
+  },
+  titleText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 6,
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginTop: 2,
   },
-  activityMetaText: {
+  metaText: {
     fontSize: 12,
-    color: '#718096',
+    color: '#6B7280',
     fontWeight: '500',
   },
+  deleteButton: {
+    padding: 2,
+  },
+  // Badges
+  badgeSaranAI: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 4,
+  },
+  badgeTextSaranAI: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#9333EA',
+  },
+  badgePenting: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  badgeTextPenting: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  badgeKurangRelevan: {
+    backgroundColor: '#9CA3AF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  badgeTextKurangRelevan: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  // Actions
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  addButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  addButtonText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  gantiButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  gantiButtonText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  dismissButton: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  dismissButtonText: {
+    color: '#4B5563',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  // Mascot image positioning
+  mascotImage: {
+    position: 'absolute',
+    bottom: -5,
+    right: 5,
+    width: 75,
+    height: 75,
+    zIndex: 0,
+  },
 });
+
