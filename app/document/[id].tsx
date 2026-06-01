@@ -5,188 +5,96 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
   Share,
   Alert,
-  Dimensions,
+  ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { WebView } from 'react-native-webview';
-import type { WebViewErrorEvent } from 'react-native-webview/lib/WebViewTypes';
-import Pdf from 'react-native-pdf';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, RefreshCw, AlertCircle } from 'lucide-react-native';
-import { CONFIG } from '../../constants/Config';
-
-type LoadState = 'loading' | 'success' | 'error';
+import { ArrowLeft, Share2, FileText, Wand2 } from 'lucide-react-native';
+import { DocumentService } from '../../services/documentService';
 
 export default function DocumentDetailScreen() {
-  const { url, title } = useLocalSearchParams<{ url: string; title: string }>();
+  const { url, title, id } = useLocalSearchParams<{ url: string; title: string; id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [loadState, setLoadState] = useState<LoadState>('loading');
-  const [webViewKey, setWebViewKey] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
-  // --- URL Construction ---
-  const buildFullUrl = useCallback((): string | null => {
-    if (!url) return null;
-    const decodedUrl = decodeURIComponent(url);
-    if (decodedUrl.startsWith('http')) return decodedUrl;
-    return `${CONFIG.API_BASE_URL}${decodedUrl.startsWith('/') ? '' : '/'}${decodedUrl}`;
-  }, [url]);
-
-  const fullUrl = buildFullUrl();
-  const isPdf = fullUrl?.toLowerCase().endsWith('.pdf') ?? false;
-
-  // For non-PDF files on Android, use Google Docs Viewer
-  const webViewUrl = useCallback((): string | null => {
-    if (!fullUrl || isPdf) return fullUrl;
-    const isLocalUrl =
-      fullUrl.includes('10.0.2.2') ||
-      fullUrl.includes('localhost') ||
-      fullUrl.includes('127.0.0.1');
-    if (Platform.OS === 'android' && !isLocalUrl) {
-      return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(fullUrl)}`;
-    }
-    return fullUrl;
-  }, [fullUrl, isPdf])();
-
-  // --- Handlers ---
   const handleShare = useCallback(async () => {
-    if (!fullUrl) return;
+    if (!url) return;
     try {
       await Share.share({
         title: title || 'Document',
-        message: fullUrl,
-        url: fullUrl,
+        message: url,
+        url: url,
       });
     } catch {
       Alert.alert('Gagal', 'Tidak dapat berbagi dokumen ini.');
     }
-  }, [fullUrl, title]);
+  }, [url, title]);
 
-  const handleRetry = useCallback(() => {
-    setLoadState('loading');
-    setWebViewKey((prev) => prev + 1);
-  }, []);
-
-  // WebView handlers
-  const handleWebViewError = useCallback((e: WebViewErrorEvent) => {
-    console.warn('[DocumentDetail] WebView error:', e.nativeEvent);
-    setLoadState('error');
-  }, []);
-
-  const handleWebViewLoadEnd = useCallback(() => {
-    setLoadState((prev) => (prev === 'error' ? 'error' : 'success'));
-  }, []);
-
-  // PDF handlers
-  const handlePdfLoadComplete = useCallback((pages: number) => {
-    setTotalPages(pages);
-    setLoadState('success');
-  }, []);
-
-  const handlePdfError = useCallback((error: object) => {
-    console.warn('[DocumentDetail] PDF error:', error);
-    setLoadState('error');
-  }, []);
-
-  const handlePdfPageChanged = useCallback((page: number) => {
-    setCurrentPage(page);
-  }, []);
-
-  // --- Render: No URL ---
-  if (!fullUrl) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Header title="Error" onBack={() => router.back()} onShare={undefined} />
-        <View style={styles.centeredContainer}>
-          <AlertCircle color="#E06B32" size={48} />
-          <Text style={styles.errorTitle}>URL Tidak Ditemukan</Text>
-          <Text style={styles.errorSubtitle}>URL dokumen tidak tersedia atau tidak valid.</Text>
-        </View>
-      </View>
-    );
-  }
+  const handleAnalyze = async () => {
+    if (!id) {
+      Alert.alert('Error', 'ID Dokumen tidak valid.');
+      return;
+    }
+    try {
+      setIsAnalyzing(true);
+      const res = await DocumentService.generateRecap(
+        [id], 
+        'Tolong analisa file ini dan ambil poin-poin pentingnya'
+      );
+      setAnalysisResult(res.result);
+    } catch (error: any) {
+      console.error('Error analyzing document:', error);
+      const errorMessage = error.response?.data?.message || 'Gagal menganalisa dokumen.';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header
-        title={title || 'Document Detail'}
+        title="Detail Dokumen"
         onBack={() => router.back()}
         onShare={handleShare}
       />
 
-      {/* Page counter — only shown for PDF when loaded */}
-      {isPdf && loadState === 'success' && totalPages > 0 && (
-        <View style={styles.pageIndicator}>
-          <Text style={styles.pageIndicatorText}>
-            {currentPage} / {totalPages}
-          </Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.detailCard}>
+          <View style={styles.iconContainer}>
+            <FileText color="#E06B32" size={48} />
+          </View>
+          <Text style={styles.docTitle}>{title || 'Dokumen Tanpa Judul'}</Text>
+          <Text style={styles.docSubtitle}>File siap untuk dianalisa</Text>
         </View>
-      )}
 
-      <View style={styles.content}>
-        {/* ── PDF Viewer ── */}
-        {isPdf ? (
-          <Pdf
-            key={webViewKey}
-            source={{ uri: fullUrl, cache: true }}
-            style={[
-              styles.pdf,
-              (loadState === 'loading' || loadState === 'error') && styles.hidden,
-            ]}
-            onLoadComplete={handlePdfLoadComplete}
-            onError={handlePdfError}
-            onPageChanged={handlePdfPageChanged}
-            enablePaging
-            trustAllCerts={false}
-          />
-        ) : (
-          /* ── WebView for non-PDF files ── */
-          <WebView
-            key={webViewKey}
-            source={{ uri: webViewUrl! }}
-            style={[
-              styles.webview,
-              (loadState === 'loading' || loadState === 'error') && styles.hidden,
-            ]}
-            onLoadEnd={handleWebViewLoadEnd}
-            onError={handleWebViewError}
-            javaScriptEnabled
-            domStorageEnabled
-            startInLoadingState={false}
-            allowsInlineMediaPlayback
-            allowsBackForwardNavigationGestures={Platform.OS === 'ios'}
-          />
-        )}
+        <TouchableOpacity 
+          style={styles.analyzeButton} 
+          onPress={handleAnalyze}
+          disabled={isAnalyzing}
+        >
+          {isAnalyzing ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Wand2 color="#FFF" size={20} />
+          )}
+          <Text style={styles.analyzeButtonText}>
+            {isAnalyzing ? 'Sedang Menganalisa...' : 'Analisa Isi File'}
+          </Text>
+        </TouchableOpacity>
 
-        {/* Loading overlay */}
-        {loadState === 'loading' && (
-          <View style={styles.centeredContainer}>
-            <ActivityIndicator size="large" color="#E06B32" />
-            <Text style={styles.loadingText}>Memuat dokumen...</Text>
+        {analysisResult && (
+          <View style={styles.resultContainer}>
+            <Text style={styles.resultTitle}>Hasil Analisa:</Text>
+            <Text style={styles.resultText}>{analysisResult}</Text>
           </View>
         )}
-
-        {/* Error overlay */}
-        {loadState === 'error' && (
-          <View style={styles.centeredContainer}>
-            <AlertCircle color="#E06B32" size={48} />
-            <Text style={styles.errorTitle}>Gagal Memuat Dokumen</Text>
-            <Text style={styles.errorSubtitle}>
-              Dokumen tidak dapat ditampilkan. Periksa koneksi internet Anda dan coba lagi.
-            </Text>
-            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-              <RefreshCw color="#FFF" size={16} />
-              <Text style={styles.retryText}>Coba Lagi</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -218,9 +126,6 @@ function Header({ title, onBack, onShare }: HeaderProps) {
   );
 }
 
-// --- Styles ---
-const { width, height } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -250,75 +155,70 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 8,
   },
-  pageIndicator: {
-    alignSelf: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginVertical: 6,
-  },
-  pageIndicatorText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
   content: {
-    flex: 1,
-    position: 'relative',
+    padding: 20,
+    alignItems: 'center',
   },
-  pdf: {
-    flex: 1,
-    width,
-    height,
-    backgroundColor: '#F3F4F6',
+  detailCard: {
+    alignItems: 'center',
+    marginBottom: 32,
+    marginTop: 20,
   },
-  webview: {
-    flex: 1,
-  },
-  hidden: {
-    opacity: 0,
-  },
-  centeredContainer: {
-    ...StyleSheet.absoluteFillObject,
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#FFF0E6',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 32,
-    zIndex: 1,
+    marginBottom: 16,
   },
-  loadingText: {
-    marginTop: 12,
-    color: '#666',
-    fontSize: 14,
-  },
-  errorTitle: {
-    marginTop: 16,
-    fontSize: 18,
+  docTitle: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#111',
     textAlign: 'center',
+    marginBottom: 8,
   },
-  errorSubtitle: {
-    marginTop: 8,
+  docSubtitle: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 20,
   },
-  retryButton: {
+  analyzeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 24,
     backgroundColor: '#E06B32',
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
+    width: '100%',
+    justifyContent: 'center',
   },
-  retryText: {
+  analyzeButtonText: {
     color: '#FFF',
+    fontSize: 16,
     fontWeight: '600',
-    fontSize: 15,
+  },
+  resultContainer: {
+    marginTop: 32,
+    width: '100%',
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  resultTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 12,
+  },
+  resultText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 22,
   },
 });
