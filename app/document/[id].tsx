@@ -43,7 +43,7 @@ export default function DocumentDetailScreen() {
     try {
       setIsAnalyzing(true);
       const res = await DocumentService.generateRecap(
-        [id], 
+        [id],
         'Tolong analisa file ini dan ambil poin-poin pentingnya'
       );
       setAnalysisResult(res.result);
@@ -73,8 +73,8 @@ export default function DocumentDetailScreen() {
           <Text style={styles.docSubtitle}>File siap untuk dianalisa</Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.analyzeButton} 
+        <TouchableOpacity
+          style={styles.analyzeButton}
           onPress={handleAnalyze}
           disabled={isAnalyzing}
         >
