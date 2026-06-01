@@ -92,7 +92,7 @@ export default function TabLayout() {
           name="agenda"
           options={{
             title: 'Kegiatan',
-            tabBarLabel: 'Kegiatan',
+            tabBarLabel: 'Aktivity',
             tabBarIcon: ({ focused, color }) => (
               <TabIcon Icon={Calendar} focused={focused} color={color} />
             ),
@@ -102,7 +102,7 @@ export default function TabLayout() {
           name="media"
           options={{
             title: 'Media',
-            tabBarLabel: 'Media',
+            tabBarLabel: 'Files',
             tabBarIcon: ({ focused, color }) => (
               <TabIcon Icon={FileText} focused={focused} color={color} />
             ),

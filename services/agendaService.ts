@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import { AgendaResponse, GetAgendasParams, CreateAgendaPayload, CreateAgendaResponse } from '../types/agenda';
+import { GetAgendasParams, CreateAgendaPayload, AgendaItem } from '../types/agenda';
 
 /**
  * Agenda Service to handle all agenda-related API calls
@@ -8,9 +8,9 @@ export const agendaService = {
   /**
    * Fetch all agenda items with optional filters
    */
-  getAgendas: async (params: GetAgendasParams = {}): Promise<AgendaResponse> => {
+  getAgendas: async (params: GetAgendasParams = {}): Promise<AgendaItem[]> => {
     try {
-      const response = await apiClient.get<AgendaResponse>('/agendas', {
+      const response = await apiClient.get<AgendaItem[]>('/agendas', {
         params
       });
       return response.data;
@@ -23,16 +23,16 @@ export const agendaService = {
   /**
    * Helper to fetch a specific page
    */
-  getAgendasByPage: async (page: number, limit: number = 10): Promise<AgendaResponse> => {
+  getAgendasByPage: async (page: number, limit: number = 10): Promise<AgendaItem[]> => {
     return agendaService.getAgendas({ page, limit });
   },
 
   /**
    * Create a new agenda item
    */
-  createAgenda: async (payload: CreateAgendaPayload): Promise<CreateAgendaResponse> => {
+  createAgenda: async (payload: CreateAgendaPayload): Promise<AgendaItem> => {
     try {
-      const response = await apiClient.post<CreateAgendaResponse>('/agendas', payload);
+      const response = await apiClient.post<AgendaItem>('/agendas', payload);
       return response.data;
     } catch (error) {
       console.error('AgendaService: Error creating agenda', error);

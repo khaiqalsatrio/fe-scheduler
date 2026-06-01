@@ -7,7 +7,9 @@ import {
   TextInput, 
   ActivityIndicator, 
   StyleSheet, 
-  Platform 
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
@@ -19,6 +21,8 @@ interface AddActivityModalProps {
   setActivityTitle: (text: string) => void;
   activityNotes: string;
   setActivityNotes: (text: string) => void;
+  activityLocation: string;
+  setActivityLocation: (text: string) => void;
   onSave: () => void;
   isSaving: boolean;
 }
@@ -31,6 +35,8 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
   setActivityTitle,
   activityNotes,
   setActivityNotes,
+  activityLocation,
+  setActivityLocation,
   onSave,
   isSaving,
 }) => {
@@ -41,7 +47,10 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <View style={styles.bottomSheetOverlay}>
+      <KeyboardAvoidingView
+        style={styles.bottomSheetOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <TouchableOpacity 
           style={styles.bottomSheetBackdrop} 
           activeOpacity={1} 
@@ -55,52 +64,70 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Waktu</Text>
-            <Text style={styles.timeValue}>{selectedTimeSlot}</Text>
-          </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Judul Aktivitas *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Coffee meeting with Ahmad"
-              placeholderTextColor="#94A3B8"
-              value={activityTitle}
-              onChangeText={setActivityTitle}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Catatan (opsional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Tambahkan catatan..."
-              placeholderTextColor="#94A3B8"
-              value={activityNotes}
-              onChangeText={setActivityNotes}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <TouchableOpacity 
-            style={[
-              styles.saveButton,
-              (!activityTitle || isSaving) && styles.saveButtonDisabled
-            ]} 
-            onPress={onSave}
-            disabled={!activityTitle || isSaving}
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 20 }}
           >
-            {isSaving ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <Text style={styles.saveButtonText}>Simpan</Text>
-            )}
-          </TouchableOpacity>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Waktu</Text>
+              <Text style={styles.timeValue}>{selectedTimeSlot}</Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Judul Aktivitas *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Coffee meeting with Ahmad"
+                placeholderTextColor="#94A3B8"
+                value={activityTitle}
+                onChangeText={setActivityTitle}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Lokasi (opsional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Ruang Meeting A"
+                placeholderTextColor="#94A3B8"
+                value={activityLocation}
+                onChangeText={setActivityLocation}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Catatan (opsional)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Tambahkan catatan..."
+                placeholderTextColor="#94A3B8"
+                value={activityNotes}
+                onChangeText={setActivityNotes}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={[
+                styles.saveButton,
+                (!activityTitle || isSaving) && styles.saveButtonDisabled
+              ]} 
+              onPress={onSave}
+              disabled={!activityTitle || isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.saveButtonText}>Simpan</Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -120,6 +147,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '90%',
   },
   bottomSheetHeader: {
     flexDirection: 'row',

@@ -1,13 +1,16 @@
-import { StyleSheet, View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Search, MoreHorizontal, MoreVertical, Calendar, Gift, Wand2, Upload } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DocumentService, Document } from '../../services/documentService';
+import { CONFIG } from '../../constants/Config';
 import * as DocumentPicker from 'expo-document-picker';
 
 export default function MediaScreen() {
   const insets = useSafeAreaInsets();
-  
+  const router = useRouter();
+
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -111,6 +114,22 @@ export default function MediaScreen() {
     }
   };
 
+  const handleOpenDocument = (doc: Document) => {
+    if (!doc.file_url) {
+      Alert.alert('Info', 'Dokumen tidak memiliki URL file untuk dibuka.');
+      return;
+    }
+
+    router.push({
+      pathname: '/document/[id]',
+      params: {
+        id: doc.id,
+        url: doc.file_url,
+        title: doc.title || 'Document'
+      }
+    });
+  };
+
   const actions = [
     { id: '1', title: 'Rekap presentasi narasumber', icon: Calendar, onPress: handleGenerateRecap },
     { id: '2', title: 'Buatkan laporan kegiatan', icon: Gift, onPress: handleGenerateReport },
@@ -133,7 +152,7 @@ export default function MediaScreen() {
             source={require('../../assets/images/logo.png')}
             style={styles.logoImage}
           />
-          <Text style={styles.headerTitle}>ChatAja!</Text>
+          <Text style={styles.headerTitle}>Files</Text>
         </View>
         <TouchableOpacity style={styles.menuButton}>
           <MoreHorizontal color="#000" size={20} />
@@ -141,7 +160,7 @@ export default function MediaScreen() {
       </View>
 
       {/* Search Bar / Ask Agent */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.searchContainer}
         activeOpacity={0.8}
         onPress={handleAskAgent}
@@ -153,27 +172,27 @@ export default function MediaScreen() {
           <Search color="#9CA3AF" size={18} />
         )}
         <Text style={styles.searchText}>
-          {actionLoading === 'ask-agent' ? 'Agent sedang berpikir...' : 'Ask ChatAja Agent'}
+          {actionLoading === 'ask-agent' ? 'Tera AI sedang berpikir...' : 'Ask Tera AI'}
         </Text>
       </TouchableOpacity>
-      
+
       <ScrollView>
         {/* Document List */}
         <View style={styles.docList}>
           <View style={styles.listHeader}>
             <Text style={styles.sectionTitleList}>Dokumen Anda</Text>
             <TouchableOpacity onPress={handleUpload} style={styles.uploadBtn}>
-               <Upload color="#E06B32" size={16} />
-               <Text style={styles.uploadText}>Upload</Text>
+              <Upload color="#E06B32" size={16} />
+              <Text style={styles.uploadText}>Upload</Text>
             </TouchableOpacity>
           </View>
 
           {loading ? (
             <ActivityIndicator size="large" color="#E06B32" style={{ marginVertical: 20 }} />
           ) : documents.length === 0 ? (
-             <Text style={styles.emptyText}>Tidak ada dokumen.</Text>
+            <Text style={styles.emptyText}>Tidak ada dokumen.</Text>
           ) : documents.map((doc) => (
-            <View key={doc.id} style={styles.docItem}>
+            <TouchableOpacity key={doc.id} style={styles.docItem} onPress={() => handleOpenDocument(doc)}>
               <View style={styles.pdfIconContainer}>
                 <Text style={styles.pdfIconText}>{doc.file_type?.includes('pdf') ? 'PDF' : 'DOC'}</Text>
               </View>
@@ -186,7 +205,7 @@ export default function MediaScreen() {
               <TouchableOpacity style={styles.docMoreBtn}>
                 <MoreVertical color="#000" size={18} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
@@ -196,8 +215,8 @@ export default function MediaScreen() {
           {actions.map((action, index) => {
             const Icon = action.icon;
             return (
-              <TouchableOpacity 
-                key={action.id} 
+              <TouchableOpacity
+                key={action.id}
                 style={[styles.actionItem, index !== actions.length - 1 && styles.actionItemBorder]}
                 onPress={action.onPress}
                 disabled={!!actionLoading}
@@ -208,7 +227,7 @@ export default function MediaScreen() {
                   <Icon color="#E06B32" size={18} style={styles.actionIcon} />
                 )}
                 <Text style={styles.actionText}>
-                  {actionLoading === action.id ? 'Memproses dengan AI...' : action.title}
+                  {actionLoading === action.id ? 'Memproses dengan Tera AI...' : action.title}
                 </Text>
               </TouchableOpacity>
             )
@@ -217,8 +236,8 @@ export default function MediaScreen() {
       </ScrollView>
 
       {/* Floating Robot Mascot FAB */}
-      <TouchableOpacity 
-        style={styles.floatingMascot} 
+      <TouchableOpacity
+        style={styles.floatingMascot}
         activeOpacity={0.8}
         onPress={handleAskAgent}
       >

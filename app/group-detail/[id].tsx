@@ -118,14 +118,33 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const handleMemberClick = async (item: any) => {
+    if (item.userId === currentUser?.id) return;
+    
+    try {
+      setIsLoading(true);
+      const dmConversation = await ChatService.createOrGetDm(item.userId);
+      router.push(`/chat/${dmConversation.id}`);
+    } catch (error) {
+      Alert.alert('Error', 'Gagal memulai percakapan.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderMember = ({ item, index }: { item: any, index: number }) => {
     // Determine if this is the last member item in the filtered list
     const isLast = index === filteredMembers.length - 1;
     return (
-      <View style={[
-        styles.memberItem, 
-        isLast && styles.lastMemberItem
-      ]}>
+      <TouchableOpacity 
+        style={[
+          styles.memberItem, 
+          isLast && styles.lastMemberItem
+        ]}
+        onPress={() => handleMemberClick(item)}
+        activeOpacity={item.userId === currentUser?.id ? 1 : 0.7}
+      >
         <View style={styles.memberAvatar}>
           {item.user?.avatar_url ? (
             <Image source={{ uri: item.user.avatar_url }} style={styles.avatarImg} />
@@ -156,7 +175,7 @@ export default function GroupDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

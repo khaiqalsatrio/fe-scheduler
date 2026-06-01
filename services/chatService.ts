@@ -202,6 +202,14 @@ export const ChatService = {
   },
 
   /**
+   * Create or get existing DM with a user
+   */
+  async createOrGetDm(targetUserId: string): Promise<any> {
+    const response = await apiClient.post('/conversations/dm', { targetUserId });
+    return response.data;
+  },
+
+  /**
    * Forward a message to one or more conversations
    */
   async forwardMessage(messageId: string, conversationIds: string[]): Promise<any> {

@@ -157,16 +157,23 @@ export const MessageBubble = memo(({
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  const getSenderColor = (name: string) => {
+    if (name === 'Tera AI') return '#A855F7';
+    const colors = [
+      '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', 
+      '#009688', '#FF9800', '#FF5722', '#795548',
+      '#F44336', '#4CAF50', '#03A9F4', '#00BCD4'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
   return (
     <View style={[styles.outerContainer, isMine ? styles.myOuterContainer : styles.theirOuterContainer]}>
-      {!isMine && (chatType === 'group' || chatType === 'channel') && senderName && !isDeleted && (
-        <View style={styles.senderNameContainer}>
-          {senderName === 'Tera AI' && <Sparkles color="#A855F7" size={10} style={{ marginRight: 4 }} />}
-          <Text style={[styles.senderNameText, senderName === 'Tera AI' && styles.teraNameText]}>
-            {senderName}
-          </Text>
-        </View>
-      )}
       <TouchableOpacity 
         activeOpacity={isDeleted ? 1 : 0.8} 
         onLongPress={isDeleted ? undefined : onLongPress}
@@ -181,6 +188,19 @@ export const MessageBubble = memo(({
           isMine ? (isDeleted ? styles.myDeletedBubble : styles.myBubble) : (isDeleted ? styles.theirDeletedBubble : styles.theirBubble),
           isOnlyImage && !isDeleted && { paddingHorizontal: 4, paddingVertical: 4 }
         ]}>
+          {!isMine && (chatType === 'group' || chatType === 'channel') && senderName && !isDeleted && (
+            <View style={styles.senderNameContainerInside}>
+              {senderName === 'Tera AI' && <Sparkles color="#A855F7" size={12} style={{ marginRight: 4 }} />}
+              <Text style={[
+                styles.senderNameTextInside, 
+                senderName === 'Tera AI' && styles.teraNameText,
+                senderName !== 'Tera AI' && { color: getSenderColor(senderName) }
+              ]}>
+                {senderName}
+              </Text>
+            </View>
+          )}
+
           {isDeleted ? (
             <View style={styles.deletedContainer}>
               <Ban size={16} color="#999" style={styles.deletedIcon} />
@@ -338,27 +358,19 @@ const styles = StyleSheet.create({
   theirOuterContainer: {
     alignItems: 'flex-start',
   },
-  senderNameText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginLeft: 15,
-    marginBottom: 2,
-    marginTop: 4,
-  },
-  senderNameContainer: {
+  senderNameContainerInside: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 15,
     marginBottom: 2,
-    marginTop: 4,
+  },
+  senderNameTextInside: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
   },
   teraNameText: {
     color: '#A855F7',
     fontWeight: '700',
-    marginLeft: 0, // Reset margin since container handles it
-    marginTop: 0,
-    marginBottom: 0,
   },
   container: {
     maxWidth: '85%',

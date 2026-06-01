@@ -1,32 +1,20 @@
 export interface AgendaItem {
   id: string;
-  event_id: string;
+  userId?: string;
   title: string;
-  status: string;
-  order_index: number;
-  // Based on current UI needs, we expect these but they might be in metadata or additional fields
-  time?: string;
+  description?: string;
+  startAt?: string;
+  endAt?: string;
   location?: string;
+  isAllDay?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  // UI Specific fields
+  time?: string;
   speaker?: string;
-  notes?: string;
-  start_at?: string;
-  end_at?: string;
-  created_at?: string;
-  updated_at?: string;
+  status?: string;
 }
 
-export interface AgendaMeta {
-  total: number;
-  page: number;
-  total_page: number;
-}
-
-export interface AgendaResponse {
-  status: boolean;
-  message: string;
-  data: AgendaItem[];
-  meta: AgendaMeta;
-}
 
 export interface GetAgendasParams {
   page?: number;
@@ -38,17 +26,10 @@ export interface GetAgendasParams {
 }
 
 export interface CreateAgendaPayload {
-  event_id: string;
   title: string;
-  description: string;
-  order_index: number;
-  status: string;
-  start_at: string;
-  end_at: string;
-}
-
-export interface CreateAgendaResponse {
-  status: boolean;
-  message: string;
-  data: AgendaItem;
+  note: string;
+  startAt: string;
+  endAt: string;
+  location?: string;
+  isAllDay: boolean;
 }

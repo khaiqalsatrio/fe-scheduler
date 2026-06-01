@@ -26,19 +26,29 @@ import { ActivityCard } from '../../components/agenda/ActivityCard';
 import { AddActivityModal } from '../../components/agenda/AddActivityModal';
 import { AIAssistantModal } from '../../components/agenda/AIAssistantModal';
 
-const DAYS = [
-  { id: 1, label: 'S', date: '18' },
-  { id: 2, label: 'R', date: '19' },
-  { id: 3, label: 'K', date: '20' },
-  { id: 4, label: 'J', date: '21' },
-  { id: 5, label: 'S', date: '22' },
-  { id: 6, label: 'M', date: '23' },
-  { id: 7, label: 'S', date: '24' },
-];
+const generateDays = () => {
+  const days = [];
+  const labels = ['M', 'S', 'S', 'R', 'K', 'J', 'S'];
+  const today = new Date();
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    days.push({
+      id: i + 1,
+      label: labels[d.getDay()],
+      date: d.getDate().toString(),
+      fullDate: d.toISOString().split('T')[0]
+    });
+  }
+  return days;
+};
+
+const DAYS = generateDays();
 
 const HOURS = [
-  '06 AM', '07 AM', '08 AM', '09 AM', '10 AM', '11 AM', '12 PM', 
-  '01 PM', '02 PM', '03 PM', '04 PM', '05 PM', '06 PM', '07 PM', 
+  '06 AM', '07 AM', '08 AM', '09 AM', '10 AM', '11 AM', '12 PM',
+  '01 PM', '02 PM', '03 PM', '04 PM', '05 PM', '06 PM', '07 PM',
   '08 PM', '09 PM', '10 PM'
 ];
 
@@ -58,20 +68,22 @@ export default function AgendaScreen() {
   } = useAgenda();
 
   // Local UI State
-  const [selectedDay, setSelectedDay] = useState(4); // Default to J 21
+  const [selectedDay, setSelectedDay] = useState(1); // Default to today
   const [isAIModalVisible, setIsAIModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [activityTitle, setActivityTitle] = useState('');
   const [activityNotes, setActivityNotes] = useState('');
+  const [activityLocation, setActivityLocation] = useState('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
   const handleSaveActivity = async () => {
-    const success = await saveActivity(activityTitle, activityNotes, selectedDay, selectedTimeSlot);
+    const success = await saveActivity(activityTitle, activityNotes, selectedDay, selectedTimeSlot, activityLocation);
     if (success) {
       Alert.alert('Sukses', 'Agenda berhasil ditambahkan');
       setIsAddModalVisible(false);
       setActivityTitle('');
       setActivityNotes('');
+      setActivityLocation('');
     }
   };
 
@@ -80,7 +92,8 @@ export default function AgendaScreen() {
       activity.title,
       'Ditambahkan dari Saran AI',
       selectedDay,
-      activity.time
+      activity.time,
+      activity.location || ''
     );
     if (success) {
       setAgendas(prev => prev.filter(item => item.id !== activity.id));
@@ -89,16 +102,7 @@ export default function AgendaScreen() {
   };
 
   const handleReplaceSuggestion = (activity: any) => {
-    setAgendas(prev => prev.map(item => {
-      if (item.id === activity.id) {
-        return {
-          ...item,
-          title: 'Sarapan: Kupat Tahu Gempol',
-          location: 'Jl. Gempol Kulon No.51',
-        };
-      }
-      return item;
-    }));
+    Alert.alert('Info', 'Fitur ganti saran AI belum tersedia.');
   };
 
   const handleDismissSuggestion = (id: string) => {
@@ -112,16 +116,13 @@ export default function AgendaScreen() {
 
   const getFilteredActivitiesForHour = (hour: string) => {
     const hourActivities = activities[hour] || [];
-    
-    const dayOffset = selectedDay - 1;
-    const baseDate = new Date('2026-04-08T00:00:00Z');
-    baseDate.setUTCDate(baseDate.getUTCDate() + dayOffset);
-    const targetDateStr = baseDate.toISOString().split('T')[0];
+
+    const targetDateStr = DAYS.find(d => d.id === selectedDay)?.fullDate || new Date().toISOString().split('T')[0];
 
     return hourActivities.filter(activity => {
       const originalItem = agendas.find(item => item.id === activity.id);
       if (!originalItem) return false;
-      const itemDateStr = (originalItem.start_at || originalItem.created_at || '').split('T')[0];
+      const itemDateStr = (originalItem.startAt || originalItem.createdAt || '').split('T')[0];
       return itemDateStr === targetDateStr;
     });
   };
@@ -137,7 +138,7 @@ export default function AgendaScreen() {
             source={require('../../assets/images/logo.png')}
             style={styles.logoImage}
           />
-          <Text style={styles.headerTitle}>ChatAja!</Text>
+          <Text style={styles.headerTitle}>Aktivity</Text>
         </View>
         <TouchableOpacity style={styles.menuButton}>
           <MoreHorizontal color="#000" size={20} />
@@ -145,7 +146,7 @@ export default function AgendaScreen() {
       </View>
 
       {/* Search Bar / Ask Agent */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.searchContainer}
         onPress={() => setIsAIModalVisible(true)}
         activeOpacity={0.8}
@@ -155,15 +156,15 @@ export default function AgendaScreen() {
       </TouchableOpacity>
 
       {/* Day Selector */}
-      <DaySelector 
-        days={DAYS} 
-        selectedDay={selectedDay} 
-        onSelectDay={setSelectedDay} 
+      <DaySelector
+        days={DAYS}
+        selectedDay={selectedDay}
+        onSelectDay={setSelectedDay}
       />
 
       {/* Timeline */}
-      <ScrollView 
-        style={styles.timelineContainer} 
+      <ScrollView
+        style={styles.timelineContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => fetchAgendas(true)} />
@@ -194,17 +195,17 @@ export default function AgendaScreen() {
                 <View style={styles.hourContent}>
                   {hourActivities.length > 0 ? (
                     hourActivities.map((activity) => (
-                      <ActivityCard 
-                        key={activity.id} 
-                        activity={activity} 
-                        onDelete={deleteAgenda} 
+                      <ActivityCard
+                        key={activity.id}
+                        activity={activity}
+                        onDelete={deleteAgenda}
                         onAddSuggestion={handleAddSuggestion}
                         onDismissSuggestion={handleDismissSuggestion}
                         onReplaceSuggestion={handleReplaceSuggestion}
                       />
                     ))
                   ) : (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.emptySlot}
                       onPress={() => {
                         setSelectedTimeSlot(formatTimeRange(hour));
@@ -224,7 +225,7 @@ export default function AgendaScreen() {
       </ScrollView>
 
       {/* Modals */}
-      <AddActivityModal 
+      <AddActivityModal
         isVisible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
         selectedTimeSlot={selectedTimeSlot}
@@ -232,19 +233,21 @@ export default function AgendaScreen() {
         setActivityTitle={setActivityTitle}
         activityNotes={activityNotes}
         setActivityNotes={setActivityNotes}
+        activityLocation={activityLocation}
+        setActivityLocation={setActivityLocation}
         onSave={handleSaveActivity}
         isSaving={isSaving}
       />
 
-      <AIAssistantModal 
+      <AIAssistantModal
         isVisible={isAIModalVisible}
         onClose={() => setIsAIModalVisible(false)}
         onSend={handleSendToAI}
       />
 
       {/* Floating Robot Mascot FAB */}
-      <TouchableOpacity 
-        style={styles.floatingMascot} 
+      <TouchableOpacity
+        style={styles.floatingMascot}
         onPress={() => setIsAIModalVisible(true)}
         activeOpacity={0.8}
       >

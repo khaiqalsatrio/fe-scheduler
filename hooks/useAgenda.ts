@@ -14,39 +14,7 @@ export interface Activity {
   status?: string;
 }
 
-const MOCK_ITEMS: AgendaItem[] = [
-  {
-    id: 'mock-1',
-    event_id: '3fe7ae15-f034-4006-ad45-e7d2607787b1',
-    title: 'Sarapan: Bubur Ayam H.Aceng',
-    start_at: '2026-04-11T08:00:00Z',
-    end_at: '2026-04-11T09:00:00Z',
-    location: 'Geger Kalong Hilir',
-    status: 'saran_ai',
-    order_index: 1,
-  },
-  {
-    id: 'mock-2',
-    event_id: '3fe7ae15-f034-4006-ad45-e7d2607787b1',
-    title: 'Panel Discussion: AI in Enterprise',
-    start_at: '2026-04-11T09:00:00Z',
-    end_at: '2026-04-11T10:00:00Z',
-    location: 'Main Hall',
-    speaker: 'Multiple Speakers',
-    status: 'penting',
-    order_index: 2,
-  },
-  {
-    id: 'mock-3',
-    event_id: '3fe7ae15-f034-4006-ad45-e7d2607787b1',
-    title: 'Networking Session',
-    start_at: '2026-04-11T10:00:00Z',
-    end_at: '2026-04-11T11:00:00Z',
-    location: 'Garden Area',
-    status: 'kurang_relevan',
-    order_index: 3,
-  }
-];
+
 
 export const useAgenda = () => {
   const [agendas, setAgendas] = useState<AgendaItem[]>([]);
@@ -64,24 +32,15 @@ export const useAgenda = () => {
     setError(null);
 
     try {
-      const response = await agendaService.getAgendas({ limit: 50 });
-      if (response.status) {
-        const dbItems = response.data;
-        const merged = [...dbItems];
-        
-        // Add mock items if they don't already exist by title in database
-        MOCK_ITEMS.forEach(mock => {
-          if (!dbItems.some(item => item.title.toLowerCase() === mock.title.toLowerCase())) {
-            merged.push(mock);
-          }
-        });
-        setAgendas(merged);
+      const dbItems = await agendaService.getAgendas({ limit: 50 });
+      if (Array.isArray(dbItems)) {
+        setAgendas(dbItems);
       } else {
-        setAgendas(MOCK_ITEMS);
-        setError(response.message || 'Gagal mengambil data agenda');
+        setAgendas([]);
+        setError('Gagal mengambil data agenda');
       }
     } catch (err: any) {
-      setAgendas(MOCK_ITEMS);
+      setAgendas([]);
       setError('Terjadi kesalahan koneksi ke server');
       console.error(err);
     } finally {
@@ -98,35 +57,34 @@ export const useAgenda = () => {
     title: string, 
     notes: string, 
     day: number, 
-    timeSlot: string
+    timeSlot: string,
+    location: string
   ) => {
     if (!title) return false;
     
     setIsSaving(true);
     try {
-      // Base date: April 8, 2026
-      const dayOffset = day - 1;
-      const baseDate = new Date('2026-04-08T00:00:00Z');
-      baseDate.setUTCDate(baseDate.getUTCDate() + dayOffset);
+      const today = new Date();
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + (day - 1));
       
-      const dateStr = baseDate.toISOString().split('T')[0];
+      const dateStr = targetDate.toISOString().split('T')[0];
       
       // Parse time range (e.g., "06:00 - 07:00")
       const [startTime, endTime] = timeSlot.split(' - ');
       
       const payload = {
-        event_id: "3fe7ae15-f034-4006-ad45-e7d2607787b1",
         title: title,
-        description: notes || '',
-        order_index: agendas.length + 1,
-        status: "pending",
-        start_at: `${dateStr}T${startTime}:00Z`,
-        end_at: `${dateStr}T${endTime}:00Z`,
+        note: notes || '',
+        startAt: `${dateStr}T${startTime}:00.000Z`,
+        endAt: `${dateStr}T${endTime}:00.000Z`,
+        location: location || '',
+        isAllDay: false,
       };
 
-      const result = await agendaService.createAgenda(payload);
+      const result: any = await agendaService.createAgenda(payload);
       
-      if (result.status) {
+      if (result && result.id) {
         fetchAgendas(); 
         return true;
       } else {
@@ -143,33 +101,40 @@ export const useAgenda = () => {
   };
 
   const deleteAgenda = async (id: string) => {
-    try {
-      if (id.startsWith('mock-')) {
-        // Handle mock deletion locally
-        setAgendas(prev => prev.filter(item => item.id !== id));
-        return true;
-      }
-      await agendaService.deleteAgenda(id);
-      fetchAgendas();
-      return true;
-    } catch (err) {
-      console.error('Delete failed:', err);
-      Alert.alert('Error', 'Gagal menghapus agenda');
-      return false;
-    }
+    Alert.alert(
+      "Hapus Agenda",
+      "Apakah Anda yakin ingin menghapus agenda ini?",
+      [
+        { text: "Batal", style: "cancel" },
+        { 
+          text: "Hapus", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await agendaService.deleteAgenda(id);
+              fetchAgendas();
+            } catch (err) {
+              console.error('Delete failed:', err);
+              Alert.alert('Error', 'Gagal menghapus agenda');
+            }
+          }
+        }
+      ]
+    );
+    return true;
   };
 
   const groupedActivities = () => {
     const grouped: Record<string, Activity[]> = {};
     
     agendas.forEach(item => {
-      const hourLabel = getHourLabel(item.start_at || item.created_at);
+      const hourLabel = getHourLabel(item.startAt || item.createdAt);
       if (!grouped[hourLabel]) {
         grouped[hourLabel] = [];
       }
       
-      const timeRange = (item.start_at && item.end_at) 
-        ? `${formatLocalTime(item.start_at)} - ${formatLocalTime(item.end_at)}`
+      const timeRange = (item.startAt && item.endAt) 
+        ? `${formatLocalTime(item.startAt)} - ${formatLocalTime(item.endAt)}`
         : (item.time || 'Waktu tidak ditentukan');
 
       grouped[hourLabel].push({
@@ -178,7 +143,7 @@ export const useAgenda = () => {
         title: item.title,
         location: item.location || 'Lokasi tidak tersedia',
         speaker: item.speaker,
-        isUserItem: item.status === 'pending',
+        isUserItem: !item.status || item.status === 'pending',
         status: item.status
       });
     });
