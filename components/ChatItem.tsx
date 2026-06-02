@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
 import { User, Users, Check, VolumeX, Pin } from 'lucide-react-native';
+import { CONFIG } from '../constants/Config';
 
 interface ChatItemProps {
   name: string;
@@ -31,6 +32,16 @@ export const ChatItem: React.FC<ChatItemProps> = ({
   isMuted,
   isPinned,
 }) => {
+  const getAvatarUrl = (avatarStr?: string) => {
+    if (!avatarStr) return null;
+    if (avatarStr.startsWith('/')) {
+      return `${CONFIG.API_BASE_URL}${avatarStr}`;
+    }
+    return avatarStr;
+  };
+
+  const formattedAvatar = getAvatarUrl(avatar);
+
   return (
     <TouchableOpacity 
       style={[styles.container, isSelected && styles.selectedContainer]} 
@@ -39,8 +50,8 @@ export const ChatItem: React.FC<ChatItemProps> = ({
       activeOpacity={0.7}
     >
       <View style={styles.avatarContainer}>
-        {avatar ? (
-          <Image source={{ uri: avatar }} style={styles.avatar} />
+        {formattedAvatar ? (
+          <Image source={{ uri: formattedAvatar }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatar, styles.placeholderAvatar]}>
             {isGroup ? (

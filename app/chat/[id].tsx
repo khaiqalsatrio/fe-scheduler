@@ -255,7 +255,13 @@ export default function ChatDetailScreen() {
           setLocalSearchQuery={setLocalSearchQuery}
           setIsSearchingInside={setIsSearchingInside}
           onBack={() => router.back()}
-          onHeaderInfoPress={() => router.push({ pathname: '/group-detail/[id]' as any, params: { id: id as string, title: name as string, type: chatType } })}
+          onHeaderInfoPress={() => {
+            if (chatType === 'dm') {
+              router.push({ pathname: '/user-profile/[id]' as any, params: { id: id as string, title: name as string } });
+            } else {
+              router.push({ pathname: '/group-detail/[id]' as any, params: { id: id as string, title: name as string, type: chatType } });
+            }
+          }}
           chatType={chatType}
           memberCount={memberCount}
           name={name as string}

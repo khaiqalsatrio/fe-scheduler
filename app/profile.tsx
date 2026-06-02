@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, User, CreditCard, Bell, History, LogOut, ChevronRight } from 'lucide-react-native';
+import { X, User, CreditCard, Bell, History, LogOut, ChevronRight, Camera } from 'lucide-react-native';
 import AuthService from '../services/authService';
+import * as ImagePicker from 'expo-image-picker';
+import { CONFIG } from '../constants/Config';
 
 export default function ProfileScreen() {
   const router = useRouter();
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [userData, setUserData] = useState({
     name: 'Loading...',
     email: 'loading@example.com',
@@ -16,6 +19,46 @@ export default function ProfileScreen() {
     nik: '',
     username: ''
   });
+
+  const getAvatarUrl = (avatarStr: string) => {
+    if (!avatarStr) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80';
+    if (avatarStr.startsWith('/')) {
+      return `${CONFIG.API_BASE_URL}${avatarStr}`;
+    }
+    return avatarStr;
+  };
+
+  const handlePickAvatar = async () => {
+    if (!isLoggedIn) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedAsset = result.assets[0];
+        
+        setIsUploading(true);
+        const uriParts = selectedAsset.uri.split('/');
+        const fileName = selectedAsset.fileName || uriParts[uriParts.length - 1] || 'avatar.jpg';
+        const mimeType = selectedAsset.mimeType || 'image/jpeg';
+        
+        const response = await AuthService.updateAvatar(selectedAsset.uri, mimeType, fileName);
+        
+        if (response && response.avatar) {
+          setUserData(prev => ({ ...prev, avatar: response.avatar }));
+        }
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -86,10 +129,27 @@ export default function ProfileScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* USER INFO */}
           <View style={styles.userInfoSection}>
-            <Image
-              source={{ uri: userData.avatar }}
-              style={styles.avatar}
-            />
+            <TouchableOpacity 
+              onPress={handlePickAvatar} 
+              disabled={isUploading || !isLoggedIn} 
+              style={styles.avatarContainer}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: getAvatarUrl(userData.avatar) }}
+                style={styles.avatar}
+              />
+              {isLoggedIn && (
+                <View style={styles.editAvatarBadge}>
+                  <Camera size={12} color="#FFF" />
+                </View>
+              )}
+              {isUploading && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="small" color="#FFF" />
+                </View>
+              )}
+            </TouchableOpacity>
             <View style={styles.userTextContainer}>
               <Text style={styles.userName}>{userData.name}</Text>
               <Text style={styles.userPhone}>{userData.position || userData.email}</Text>
@@ -200,11 +260,40 @@ const styles = StyleSheet.create({
     // Add elevation for Android
     elevation: 2,
   },
+  avatarContainer: {
+    position: 'relative',
+    width: 60,
+    height: 60,
+  },
   avatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: '#F0F0F0',
+  },
+  editAvatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#0F9D58',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   userTextContainer: {
     marginLeft: 15,

@@ -38,7 +38,7 @@ export const useChatsList = () => {
     setIsSearching(true);
     try {
       // 1. Filter Lokal (Instant)
-      const localResults = chats.filter(chat => 
+      const localResults = chats.filter(chat =>
         chat.name.toLowerCase().includes(query.toLowerCase())
       );
 
@@ -152,13 +152,13 @@ export const useChatsList = () => {
   const handleUnmuteSelected = useCallback(async () => {
     setIsLoading(true);
     try {
-        await ChatService.muteConversations(selectedChatIds, false);
-        setSelectedChatIds([]);
-        fetchChatsFromBE();
+      await ChatService.muteConversations(selectedChatIds, false);
+      setSelectedChatIds([]);
+      fetchChatsFromBE();
     } catch (error) {
-        Alert.alert('Error', 'Terjadi kesalahan saat mengaktifkan suara.');
+      Alert.alert('Error', 'Terjadi kesalahan saat mengaktifkan suara.');
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, [selectedChatIds, fetchChatsFromBE]);
 
@@ -213,11 +213,11 @@ export const useChatsList = () => {
     setIsMuteModalVisible,
     muteDuration,
     setMuteDuration,
-    
+
     // Derived
     archivedCount: filteredData.archivedCount,
     mainChats: filteredData.mainChats,
-    
+
     // Handlers
     fetchChatsFromBE,
     handleChatPress,

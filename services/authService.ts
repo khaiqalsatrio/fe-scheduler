@@ -91,6 +91,25 @@ export const AuthService = {
   },
 
   /**
+   * Update current user avatar
+   */
+  async updateAvatar(uri: string, mimeType: string = 'image/jpeg', fileName: string = 'avatar.jpeg') {
+    const formData = new FormData();
+    formData.append('file', {
+      uri,
+      name: fileName,
+      type: mimeType,
+    } as any);
+
+    const response = await apiClient.post('/users/me/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  /**
    * Check if user is authenticated
    */
   async isAuthenticated(): Promise<boolean> {

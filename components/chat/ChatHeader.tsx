@@ -56,9 +56,8 @@ export function ChatHeader({
       <TouchableOpacity onPress={onBack} style={styles.backButton}>
         <ChevronLeft color="#22C55E" size={28} />
       </TouchableOpacity>
-      <TouchableOpacity 
-        style={styles.headerInfo} 
-        disabled={chatType !== 'group' && chatType !== 'channel'} 
+      <TouchableOpacity
+        style={styles.headerInfo}
         onPress={onHeaderInfoPress}
       >
         <View style={[styles.headerAvatar, (chatType === 'group' || chatType === 'channel') && { backgroundColor: '#E0EEFF' }]}>
