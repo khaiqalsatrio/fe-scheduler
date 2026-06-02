@@ -41,26 +41,29 @@ export class DocumentService {
     return response.data;
   }
 
-  static async generateRecap(documentIds: string[], context: string): Promise<{ result: string; document_url: string }> {
+  static async generateRecap(documentIds: string[], context: string, title?: string): Promise<{ result: string; document_url: string; document?: Document }> {
     const response = await apiClient.post('/api/documents/generate/recap', {
       source_document_ids: documentIds,
       context,
+      title,
     });
     return response.data;
   }
 
-  static async generateReport(documentIds: string[], context: string): Promise<{ result: string; document_url: string }> {
+  static async generateReport(documentIds: string[], context: string, title?: string): Promise<{ result: string; document_url: string; document?: Document }> {
     const response = await apiClient.post('/api/documents/generate/report', {
       source_document_ids: documentIds,
       context,
+      title,
     });
     return response.data;
   }
 
-  static async generateMom(documentIds: string[], context: string): Promise<{ result: string; document_url: string }> {
+  static async generateMom(documentIds: string[], context: string, title?: string): Promise<{ result: string; document_url: string; document?: Document }> {
     const response = await apiClient.post('/api/documents/generate/mom', {
       source_document_ids: documentIds,
       context,
+      title,
     });
     return response.data;
   }

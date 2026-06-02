@@ -36,8 +36,10 @@ export default function MediaScreen() {
     if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
     try {
       setActionLoading('1');
-      const result = await DocumentService.generateRecap([documents[0].id], 'Minta tolong buatkan rekap dari presentasi narasumber');
-      Alert.alert('Sukses', `Recap berhasil dibuat:\n\n${result.result}`);
+      const docTitle = documents[0].title || 'Dokumen';
+      const result = await DocumentService.generateRecap([documents[0].id], 'Minta tolong buatkan rekap dari presentasi narasumber', `Rekap - ${docTitle}`);
+      Alert.alert('Sukses', `Recap berhasil dibuat dan disimpan sebagai PDF!`);
+      fetchDocuments();
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Gagal membuat rekap.');
@@ -50,8 +52,10 @@ export default function MediaScreen() {
     if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
     try {
       setActionLoading('2');
-      const result = await DocumentService.generateReport([documents[0].id], 'Buatkan laporan kegiatan hari ini');
-      Alert.alert('Sukses', `Laporan berhasil dibuat:\n\n${result.result}`);
+      const docTitle = documents[0].title || 'Dokumen';
+      const result = await DocumentService.generateReport([documents[0].id], 'Buatkan laporan kegiatan hari ini', `Laporan - ${docTitle}`);
+      Alert.alert('Sukses', `Laporan berhasil dibuat dan disimpan sebagai PDF!`);
+      fetchDocuments();
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Gagal membuat laporan.');
@@ -64,8 +68,10 @@ export default function MediaScreen() {
     if (documents.length === 0) return Alert.alert('Error', 'Pilih dokumen terlebih dahulu');
     try {
       setActionLoading('3');
-      const result = await DocumentService.generateMom([documents[0].id], 'Tolong buatkan MoM dari diskusi tim');
-      Alert.alert('Sukses', `MoM berhasil dibuat:\n\n${result.result}`);
+      const docTitle = documents[0].title || 'Dokumen';
+      const result = await DocumentService.generateMom([documents[0].id], 'Tolong buatkan MoM dari diskusi tim', `MoM - ${docTitle}`);
+      Alert.alert('Sukses', `MoM berhasil dibuat dan disimpan sebagai PDF!`);
+      fetchDocuments();
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Gagal membuat MoM.');
