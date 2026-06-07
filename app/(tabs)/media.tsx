@@ -1,7 +1,7 @@
 import { StyleSheet, View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Search, MoreHorizontal, MoreVertical, Calendar, Gift, Wand2, Upload, FileText, Edit3 } from 'lucide-react-native';
+import { Search, MoreHorizontal, MoreVertical, Calendar, Gift, Wand2, Upload, FileText, Edit3, Trash2, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DocumentService, Document } from '../../services/documentService';
 import { CONFIG } from '../../constants/Config';
@@ -14,6 +14,13 @@ export default function MediaScreen() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+
+  const filteredDocuments = documents.filter(doc => 
+    (doc.title || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     fetchDocuments();
@@ -136,6 +143,81 @@ export default function MediaScreen() {
     });
   };
 
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedDocs(new Set());
+  };
+
+  const toggleDocSelection = (id: string) => {
+    const newSelected = new Set(selectedDocs);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedDocs(newSelected);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedDocs.size === 0) {
+      Alert.alert('Info', 'Pilih dokumen yang ingin dihapus');
+      return;
+    }
+
+    Alert.alert(
+      'Hapus Dokumen',
+      `Apakah Anda yakin ingin menghapus ${selectedDocs.size} dokumen?`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const deletePromises = Array.from(selectedDocs).map(id => DocumentService.deleteDocument(id));
+              await Promise.all(deletePromises);
+              Alert.alert('Sukses', `${selectedDocs.size} dokumen berhasil dihapus`);
+              setIsSelectionMode(false);
+              setSelectedDocs(new Set());
+              fetchDocuments();
+            } catch (error) {
+              console.error('Error deleting documents:', error);
+              Alert.alert('Error', 'Gagal menghapus beberapa dokumen.');
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteDocument = (id: string, title: string) => {
+    Alert.alert(
+      'Hapus Dokumen',
+      `Apakah Anda yakin ingin menghapus "${title}"?`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        { 
+          text: 'Hapus', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await DocumentService.deleteDocument(id);
+              Alert.alert('Sukses', 'Dokumen berhasil dihapus');
+              fetchDocuments();
+            } catch (error) {
+              console.error('Error deleting document:', error);
+              Alert.alert('Error', 'Gagal menghapus dokumen.');
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const actions = [
     { id: '1', title: 'Rekap presentasi narasumber', icon: Calendar, onPress: handleGenerateRecap },
     { id: '2', title: 'Buatkan laporan kegiatan', icon: FileText, onPress: handleGenerateReport },
@@ -160,27 +242,36 @@ export default function MediaScreen() {
           />
           <Text style={styles.headerTitle}>Files</Text>
         </View>
-        <TouchableOpacity style={styles.menuButton}>
+        <TouchableOpacity style={styles.menuButton} onPress={toggleSelectionMode}>
           <MoreHorizontal color="#000" size={20} />
         </TouchableOpacity>
       </View>
 
-      {/* Search Bar / Ask Agent */}
-      <TouchableOpacity
-        style={styles.searchContainer}
-        activeOpacity={0.8}
-        onPress={handleAskAgent}
-        disabled={!!actionLoading}
-      >
-        {actionLoading === 'ask-agent' ? (
-          <ActivityIndicator size="small" color="#9CA3AF" />
-        ) : (
-          <Search color="#9CA3AF" size={18} />
-        )}
-        <Text style={styles.searchText}>
-          {actionLoading === 'ask-agent' ? 'Tera AI sedang berpikir...' : 'Ask Tera AI about your files...'}
-        </Text>
-      </TouchableOpacity>
+      {isSelectionMode && (
+        <View style={styles.selectionBanner}>
+          <Text style={styles.selectionText}>{selectedDocs.size} item dipilih</Text>
+          <View style={styles.selectionActions}>
+            <TouchableOpacity onPress={toggleSelectionMode} style={styles.cancelBtn}>
+              <Text style={styles.cancelBtnText}>Batal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDeleteSelected} style={styles.deleteBtn}>
+              <Text style={styles.deleteBtnText}>Hapus</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Search color="#9CA3AF" size={18} />
+        <TextInput
+          style={[styles.searchText, { flex: 1, height: '100%' }]}
+          placeholder="Cari file..."
+          placeholderTextColor="#9CA3AF"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
 
       {/* UPLOAD BUTTON */}
       <TouchableOpacity onPress={handleUpload} style={styles.uploadBtnMain}>
@@ -193,16 +284,22 @@ export default function MediaScreen() {
         <View style={styles.docList}>
           <View style={styles.listHeader}>
             <Text style={styles.sectionTitleList}>YOUR DOCUMENTS</Text>
-            <Text style={styles.listCountText}>Showing {documents.length} files</Text>
+            <Text style={styles.listCountText}>Showing {filteredDocuments.length} files</Text>
           </View>
 
           {loading ? (
             <ActivityIndicator size="large" color="#000" style={{ marginVertical: 20 }} />
-          ) : documents.length === 0 ? (
+          ) : filteredDocuments.length === 0 ? (
             <Text style={styles.emptyText}>Tidak ada dokumen.</Text>
-          ) : documents.map((doc) => {
+          ) : filteredDocuments.map((doc) => {
+            const isSelected = selectedDocs.has(doc.id);
             return (
-              <TouchableOpacity key={doc.id} style={styles.docItem} onPress={() => handleOpenDocument(doc)}>
+              <TouchableOpacity 
+                key={doc.id} 
+                style={[styles.docItem, isSelectionMode && isSelected && { borderColor: '#DE3B32', backgroundColor: '#FEF2F2' }]} 
+                onPress={() => isSelectionMode ? toggleDocSelection(doc.id) : handleOpenDocument(doc)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.pdfIconContainer}>
                   <FileText size={20} color="#DE3B32" />
                 </View>
@@ -212,6 +309,26 @@ export default function MediaScreen() {
                     {formatFileSize(doc.file_size)} • Modified {doc.location ? `in ${doc.location} ` : ''}by {doc.modifiedBy?.name || 'Unknown'}
                   </Text>
                 </View>
+                {!isSelectionMode ? (
+                  <TouchableOpacity onPress={() => handleDeleteDocument(doc.id, doc.title || 'Dokumen')} style={{ padding: 8 }}>
+                    <Trash2 size={20} color="#EF4444" />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ padding: 8 }}>
+                    <View style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      borderWidth: isSelected ? 0 : 2,
+                      borderColor: '#D1D5DB',
+                      backgroundColor: isSelected ? '#DE3B32' : 'transparent',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                      {isSelected && <Check size={14} color="#FFF" strokeWidth={3} />}
+                    </View>
+                  </View>
+                )}
               </TouchableOpacity>
             )
           })}
@@ -416,4 +533,43 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#888',
   },
+  selectionBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  selectionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  selectionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cancelBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  cancelBtnText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  deleteBtn: {
+    backgroundColor: '#EF4444',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  deleteBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 14,
+  }
 });

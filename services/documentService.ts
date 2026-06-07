@@ -68,6 +68,11 @@ export class DocumentService {
     return response.data;
   }
 
+  static async deleteDocument(id: string): Promise<void> {
+    const response = await apiClient.delete(`/api/documents/${id}`);
+    return response.data;
+  }
+
   static async askAgent(query: string): Promise<{ answer: string; references: any[] }> {
     const response = await apiClient.post('/api/agent/chat', { query });
     return response.data;
