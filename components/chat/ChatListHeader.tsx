@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
-import { ArrowLeft, Pin, Bell, BellOff, Archive, Trash2, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, Pin, Bell, BellOff, Archive, Trash2, ListChecks } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { ChatListItem } from '../../types/chat';
 import { useTheme } from '../../context/ThemeContext';
@@ -86,7 +86,7 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconButton} onPress={onEnterSelectionMode}>
-              <MoreVertical color={isDarkMode ? "#FFF" : "#333"} size={24} />
+              <ListChecks color={isDarkMode ? "#FFF" : "#333"} size={24} />
             </TouchableOpacity>
           </View>
         </View>
