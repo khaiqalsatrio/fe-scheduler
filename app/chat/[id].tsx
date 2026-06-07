@@ -23,11 +23,14 @@ import { useChatActions } from '../../hooks/useChatActions';
 import { MessageService } from '../../services/messageService';
 import { ChatService } from '../../services/chatService';
 import { Message } from '../../types/chat';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function ChatDetailScreen() {
+
   const { id, name } = useLocalSearchParams();
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
+  const { isDarkMode } = useTheme();
 
   // --- UI States (Menus & Animations) ---
   const keyboardHeightAnim = useRef(new Animated.Value(0)).current;
@@ -247,8 +250,8 @@ export default function ChatDetailScreen() {
   }, [playingVoiceId, myId, chatType, handleVoiceFinish, handleReact]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && styles.safeAreaDark]}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
         <ChatHeader
           isSearchingInside={isSearchingInside}
           localSearchQuery={localSearchQuery}
@@ -270,7 +273,7 @@ export default function ChatDetailScreen() {
         />
       </View>
 
-      <ImageBackground source={require('../../assets/images/wallpaper.jpg')} style={styles.container} resizeMode="repeat">
+      <ImageBackground source={isDarkMode ? require('../../assets/images/darkmode.png') : require('../../assets/images/wallpaper.jpg')} style={[styles.container, isDarkMode && styles.containerDark]} resizeMode="repeat">
         <PinnedMessages
           pinnedMessages={pinnedMessages}
           activePinnedIndex={activePinnedIndex}
@@ -331,7 +334,7 @@ export default function ChatDetailScreen() {
 
         {isAiThinking && (
           <View style={styles.aiThinkingContainer}>
-            <View style={styles.aiThinkingBubble}><Sparkles color="#A855F7" size={14} style={{ marginRight: 6 }} /><Text style={styles.aiThinkingText}>AI sedang menyiapkan balasan...</Text></View>
+            <View style={[styles.aiThinkingBubble, isDarkMode && styles.aiThinkingBubbleDark]}><Sparkles color="#A855F7" size={14} style={{ marginRight: 6 }} /><Text style={[styles.aiThinkingText, isDarkMode && styles.textDark]}>AI sedang menyiapkan balasan...</Text></View>
           </View>
         )}
 
@@ -349,7 +352,7 @@ export default function ChatDetailScreen() {
         )}
       </ImageBackground>
       {Platform.OS === 'android' && (
-        <Animated.View style={{ height: keyboardHeightAnim, backgroundColor: '#E5DDD5' }} />
+        <Animated.View style={{ height: keyboardHeightAnim, backgroundColor: isDarkMode ? '#121212' : '#E5DDD5' }} />
       )}
 
       <MessageActionMenu
@@ -401,8 +404,11 @@ export default function ChatDetailScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFF', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  safeAreaDark: { backgroundColor: '#121212' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, backgroundColor: '#FFFFFF', height: 65, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E0E0E0' },
+  headerDark: { backgroundColor: '#1E1E1E', borderBottomColor: '#333' },
   container: { flex: 1, backgroundColor: '#E5DDD5' },
+  containerDark: { backgroundColor: '#0B141A' },
   dateSeparatorContainer: { alignItems: 'center', marginVertical: 15 },
   dateSeparatorCapsule: { backgroundColor: 'rgba(255, 255, 255, 0.6)', paddingHorizontal: 16, paddingVertical: 4, borderRadius: 20, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1 },
   dateSeparatorText: { fontSize: 12, color: '#555', fontWeight: '600' },
@@ -410,5 +416,7 @@ const styles = StyleSheet.create({
   listContent: { paddingVertical: 10, paddingHorizontal: 15 },
   aiThinkingContainer: { paddingHorizontal: 15, paddingVertical: 10, alignItems: 'flex-start' },
   aiThinkingBubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.8)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#F3E8FF' },
+  aiThinkingBubbleDark: { backgroundColor: 'rgba(30, 30, 30, 0.8)', borderColor: '#333' },
   aiThinkingText: { fontSize: 13, color: '#6B21A8', fontStyle: 'italic', fontWeight: '500' },
+  textDark: { color: '#D8B4FE' },
 });

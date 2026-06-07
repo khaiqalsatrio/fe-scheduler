@@ -11,9 +11,11 @@ import { ChatListHeader } from '../../components/chat/ChatListHeader';
 import { ChatSearchBar } from '../../components/chat/ChatSearchBar';
 import { ChatFilters } from '../../components/chat/ChatFilters';
 import { DeleteConversationModal, MuteOptionsModal } from '../../components/chat/ChatModals';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function ChatsScreen() {
   const router = useRouter();
+  const { isDarkMode } = useTheme();
   const {
     chats,
     isLoading,
@@ -53,8 +55,8 @@ export default function ChatsScreen() {
   const renderSearchItem = ({ item }: { item: any }) => {
     if (item.type === 'header') {
       return (
-        <View style={styles.searchCategoryHeader}>
-          <Text style={styles.searchCategoryHeaderText}>{item.title}</Text>
+        <View style={[styles.searchCategoryHeader, isDarkMode && styles.searchCategoryHeaderDark]}>
+          <Text style={[styles.searchCategoryHeaderText, isDarkMode && styles.textDark]}>{item.title}</Text>
         </View>
       );
     }
@@ -80,19 +82,19 @@ export default function ChatsScreen() {
     const conversationName = item.conversation?.title || item.sender?.name || 'User';
     return (
       <TouchableOpacity
-        style={styles.searchResultItem}
+        style={[styles.searchResultItem, isDarkMode && styles.searchResultItemDark]}
         onPress={() => handleChatPress(item.conversation_id, conversationName)}
       >
         <View style={styles.searchResultHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.searchResultName}>{conversationName}</Text>
+            <Text style={[styles.searchResultName, isDarkMode && styles.textDark]}>{conversationName}</Text>
             {item.conversation?.type === 'group' && <Text style={styles.groupBadge}>Grup</Text>}
           </View>
           <Text style={styles.searchResultTime}>
             {new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' })}
           </Text>
         </View>
-        <Text style={styles.searchResultText} numberOfLines={2}>
+        <Text style={[styles.searchResultText, isDarkMode && styles.textGrayDark]} numberOfLines={2}>
           {item.content}
         </Text>
       </TouchableOpacity>
@@ -100,7 +102,7 @@ export default function ChatsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>
       <ChatListHeader
         selectedChatIds={selectedChatIds}
         setSelectedChatIds={setSelectedChatIds}
@@ -149,12 +151,12 @@ export default function ChatsScreen() {
           extraData={chats}
           ListHeaderComponent={archivedCount > 0 ? (
             <TouchableOpacity
-              style={styles.archivedHeader}
+              style={[styles.archivedHeader, isDarkMode && styles.searchResultItemDark]}
               onPress={() => router.push('/archived' as any)}
               activeOpacity={0.7}
             >
-              <Archive color="#868D95" size={20} style={styles.archivedIcon} />
-              <Text style={styles.archivedText}>Diarsipkan</Text>
+              <Archive color={isDarkMode ? "#AAA" : "#868D95"} size={20} style={styles.archivedIcon} />
+              <Text style={[styles.archivedText, isDarkMode && styles.textDark]}>Diarsipkan</Text>
               {chats.filter(c => c.isArchived && c.unreadCount > 0).length > 0 && (
                 <Text style={styles.archivedCountText}>
                   {chats.filter(c => c.isArchived && c.unreadCount > 0).reduce((acc, c) => acc + c.unreadCount, 0)}
@@ -216,6 +218,11 @@ export default function ChatsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
+  containerDark: { backgroundColor: '#121212' },
+  textDark: { color: '#FFF' },
+  textGrayDark: { color: '#AAA' },
+  searchCategoryHeaderDark: { backgroundColor: '#1A1A1A' },
+  searchResultItemDark: { borderBottomColor: '#333' },
   listContent: { paddingBottom: 100 },
   listFooter: { alignItems: 'center', marginTop: 30, marginBottom: 50 },
   footerText: { fontSize: 12, color: '#999' },

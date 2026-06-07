@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { MapPin, User, X, Sparkle } from 'lucide-react-native';
 import { Activity } from '../../hooks/useAgenda';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -18,11 +19,19 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   onDismissSuggestion,
   onReplaceSuggestion,
 }) => {
+  const { isDarkMode } = useTheme();
+
   const isSaranAI = activity.status === 'saran_ai';
   const isPenting = activity.status === 'penting';
   const isKurangRelevan = activity.status === 'kurang_relevan';
 
   const getCardStyle = () => {
+    if (isDarkMode) {
+      if (isSaranAI) return styles.cardSaranAIDark;
+      if (isPenting) return styles.cardPentingDark;
+      if (isKurangRelevan) return styles.cardKurangRelevanDark;
+      return activity.isUserItem ? styles.cardUserDark : styles.cardDefaultDark;
+    }
     if (isSaranAI) return styles.cardSaranAI;
     if (isPenting) return styles.cardPenting;
     if (isKurangRelevan) return styles.cardKurangRelevan;
@@ -83,7 +92,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         </View>
 
         {/* Title */}
-        <Text style={styles.titleText}>{activity.title}</Text>
+        <Text style={[styles.titleText, isDarkMode && styles.textDark]}>{activity.title}</Text>
 
         {/* Location Info */}
         {activity.location && (
@@ -150,19 +159,37 @@ const styles = StyleSheet.create({
   cardDefault: {
     backgroundColor: '#EFF6FF',
   },
+  cardDefaultDark: {
+    backgroundColor: '#1E3A8A',
+  },
   cardUser: {
     backgroundColor: '#F0FDF4',
     borderLeftWidth: 3,
     borderLeftColor: '#22C55E',
   },
+  cardUserDark: {
+    backgroundColor: '#064E3B',
+    borderLeftWidth: 3,
+    borderLeftColor: '#10B981',
+  },
   cardSaranAI: {
     backgroundColor: '#F5F3FF',
+  },
+  cardSaranAIDark: {
+    backgroundColor: '#4C1D95',
   },
   cardPenting: {
     backgroundColor: '#EFF6FF',
   },
+  cardPentingDark: {
+    backgroundColor: '#1E3A8A',
+  },
   cardKurangRelevan: {
     backgroundColor: '#F9FAFB',
+    minHeight: 90,
+  },
+  cardKurangRelevanDark: {
+    backgroundColor: '#1F2937',
     minHeight: 90,
   },
   cardContent: {
@@ -213,6 +240,9 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 2,
+  },
+  textDark: {
+    color: '#FFF',
   },
   // Badges
   badgeSaranAI: {

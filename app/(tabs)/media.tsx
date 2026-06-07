@@ -6,10 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DocumentService, Document } from '../../services/documentService';
 import { CONFIG } from '../../constants/Config';
 import * as DocumentPicker from 'expo-document-picker';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function MediaScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { isDarkMode } = useTheme();
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -232,18 +234,18 @@ export default function MediaScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, isDarkMode && styles.containerDark, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isDarkMode && styles.containerDark]}>
         <View style={styles.logoContainer}>
           <Image
             source={require('../../assets/images/logo.png')}
             style={styles.logoImage}
           />
-          <Text style={styles.headerTitle}>Files</Text>
+          <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Files</Text>
         </View>
-        <TouchableOpacity style={styles.menuButton} onPress={toggleSelectionMode}>
-          <MoreHorizontal color="#000" size={20} />
+        <TouchableOpacity style={[styles.menuButton, isDarkMode && styles.menuButtonDark]} onPress={toggleSelectionMode}>
+          <MoreHorizontal color={isDarkMode ? "#FFF" : "#000"} size={20} />
         </TouchableOpacity>
       </View>
 
@@ -262,10 +264,10 @@ export default function MediaScreen() {
       )}
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Search color="#9CA3AF" size={18} />
+      <View style={[styles.searchContainer, isDarkMode && styles.searchContainerDark]}>
+        <Search color={isDarkMode ? "#9CA3AF" : "#9CA3AF"} size={18} />
         <TextInput
-          style={[styles.searchText, { flex: 1, height: '100%' }]}
+          style={[styles.searchText, isDarkMode && styles.textDark, { flex: 1, height: '100%' }]}
           placeholder="Cari file..."
           placeholderTextColor="#9CA3AF"
           value={searchQuery}
@@ -274,9 +276,9 @@ export default function MediaScreen() {
       </View>
 
       {/* UPLOAD BUTTON */}
-      <TouchableOpacity onPress={handleUpload} style={styles.uploadBtnMain}>
-        <Upload color="#FFF" size={16} />
-        <Text style={styles.uploadTextMain}>UPLOAD</Text>
+      <TouchableOpacity onPress={handleUpload} style={[styles.uploadBtnMain, isDarkMode && styles.uploadBtnMainDark]}>
+        <Upload color={isDarkMode ? "#000" : "#FFF"} size={16} />
+        <Text style={[styles.uploadTextMain, isDarkMode && styles.uploadTextMainDark]}>UPLOAD</Text>
       </TouchableOpacity>
 
       <ScrollView>
@@ -296,7 +298,7 @@ export default function MediaScreen() {
             return (
               <TouchableOpacity 
                 key={doc.id} 
-                style={[styles.docItem, isSelectionMode && isSelected && { borderColor: '#DE3B32', backgroundColor: '#FEF2F2' }]} 
+                style={[styles.docItem, isDarkMode && styles.docItemDark, isSelectionMode && isSelected && { borderColor: '#DE3B32', backgroundColor: isDarkMode ? '#450a0a' : '#FEF2F2' }]} 
                 onPress={() => isSelectionMode ? toggleDocSelection(doc.id) : handleOpenDocument(doc)}
                 activeOpacity={0.7}
               >
@@ -304,7 +306,7 @@ export default function MediaScreen() {
                   <FileText size={20} color="#DE3B32" />
                 </View>
                 <View style={styles.docInfo}>
-                  <Text style={styles.docTitle}>{doc.title}</Text>
+                  <Text style={[styles.docTitle, isDarkMode && styles.textDark]}>{doc.title}</Text>
                   <Text style={styles.docSubtitle} numberOfLines={1}>
                     {formatFileSize(doc.file_size)} • Modified {doc.location ? `in ${doc.location} ` : ''}by {doc.modifiedBy?.name || 'Unknown'}
                   </Text>
@@ -344,18 +346,18 @@ export default function MediaScreen() {
             return (
               <TouchableOpacity
                 key={action.id}
-                style={styles.actionCard}
+                style={[styles.actionCard, isDarkMode && styles.actionCardDark]}
                 onPress={action.onPress}
                 disabled={!!actionLoading}
               >
                 <View style={styles.actionIconContainer}>
                   {actionLoading === action.id ? (
-                    <ActivityIndicator size="small" color="#000" />
+                    <ActivityIndicator size="small" color={isDarkMode ? "#FFF" : "#000"} />
                   ) : (
-                    <Icon color="#000" size={20} />
+                    <Icon color={isDarkMode ? "#FFF" : "#000"} size={20} />
                   )}
                 </View>
-                <Text style={styles.actionTitleText}>
+                <Text style={[styles.actionTitleText, isDarkMode && styles.textDark]}>
                   {actionLoading === action.id ? 'Memproses...' : action.title}
                 </Text>
                 <Text style={styles.actionDescText}>
@@ -374,6 +376,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
+  },
+  containerDark: {
+    backgroundColor: '#121212',
   },
   header: {
     flexDirection: 'row',
@@ -405,6 +410,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  menuButtonDark: {
+    backgroundColor: '#1E1E1E',
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -417,6 +425,10 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 8,
     gap: 8,
+  },
+  searchContainerDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
   },
   searchText: {
     color: '#9CA3AF',
@@ -438,6 +450,12 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  uploadBtnMainDark: {
+    backgroundColor: '#FFF',
+  },
+  uploadTextMainDark: {
+    color: '#000',
   },
   docList: {
     paddingHorizontal: 20,
@@ -475,6 +493,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
+  },
+  docItemDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
   },
   pdfIconContainer: {
     width: 40,
@@ -519,6 +541,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 10,
     alignItems: 'flex-start',
+  },
+  actionCardDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
   },
   actionIconContainer: {
     marginBottom: 10,
@@ -571,5 +597,8 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '700',
     fontSize: 14,
-  }
+  },
+  textDark: {
+    color: '#FFF',
+  },
 });

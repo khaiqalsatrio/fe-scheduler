@@ -12,6 +12,7 @@ import {
   ScrollView
 } from 'react-native';
 import { X } from 'lucide-react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface AddActivityModalProps {
   isVisible: boolean;
@@ -40,6 +41,8 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
   onSave,
   isSaving,
 }) => {
+  const { isDarkMode } = useTheme();
+
   return (
     <Modal
       animationType="slide"
@@ -56,11 +59,11 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
           activeOpacity={1} 
           onPress={onClose} 
         />
-        <View style={styles.bottomSheetContent}>
+        <View style={[styles.bottomSheetContent, isDarkMode && styles.bottomSheetContentDark]}>
           <View style={styles.bottomSheetHeader}>
-            <Text style={styles.bottomSheetTitle}>Tambah Aktivitas</Text>
+            <Text style={[styles.bottomSheetTitle, isDarkMode && styles.textDark]}>Tambah Aktivitas</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color="#64748B" />
+              <X size={24} color={isDarkMode ? "#FFF" : "#64748B"} />
             </TouchableOpacity>
           </View>
 
@@ -71,38 +74,38 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
             contentContainerStyle={{ paddingBottom: 20 }}
           >
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Waktu</Text>
-              <Text style={styles.timeValue}>{selectedTimeSlot}</Text>
+              <Text style={[styles.label, isDarkMode && styles.labelDark]}>Waktu</Text>
+              <Text style={[styles.timeValue, isDarkMode && styles.textDark]}>{selectedTimeSlot}</Text>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Judul Aktivitas *</Text>
+              <Text style={[styles.label, isDarkMode && styles.labelDark]}>Judul Aktivitas *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, isDarkMode && styles.inputDark]}
                 placeholder="e.g., Coffee meeting with Ahmad"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDarkMode ? "#64748B" : "#94A3B8"}
                 value={activityTitle}
                 onChangeText={setActivityTitle}
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Lokasi (opsional)</Text>
+              <Text style={[styles.label, isDarkMode && styles.labelDark]}>Lokasi (opsional)</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, isDarkMode && styles.inputDark]}
                 placeholder="e.g., Ruang Meeting A"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDarkMode ? "#64748B" : "#94A3B8"}
                 value={activityLocation}
                 onChangeText={setActivityLocation}
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Catatan (opsional)</Text>
+              <Text style={[styles.label, isDarkMode && styles.labelDark]}>Catatan (opsional)</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, isDarkMode && styles.inputDark]}
                 placeholder="Tambahkan catatan..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDarkMode ? "#64748B" : "#94A3B8"}
                 value={activityNotes}
                 onChangeText={setActivityNotes}
                 multiline
@@ -114,7 +117,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
             <TouchableOpacity 
               style={[
                 styles.saveButton,
-                (!activityTitle || isSaving) && styles.saveButtonDisabled
+                (!activityTitle || isSaving) && [styles.saveButtonDisabled, isDarkMode && styles.saveButtonDisabledDark]
               ]} 
               onPress={onSave}
               disabled={!activityTitle || isSaving}
@@ -149,6 +152,9 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     maxHeight: '90%',
   },
+  bottomSheetContentDark: {
+    backgroundColor: '#1E1E1E',
+  },
   bottomSheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -172,6 +178,9 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 8,
   },
+  labelDark: {
+    color: '#9CA3AF',
+  },
   timeValue: {
     fontSize: 16,
     fontWeight: '700',
@@ -187,6 +196,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
+  inputDark: {
+    backgroundColor: '#333',
+    borderColor: '#444',
+    color: '#FFF',
+  },
   textArea: {
     height: 100,
   },
@@ -200,9 +214,15 @@ const styles = StyleSheet.create({
   saveButtonDisabled: {
     backgroundColor: '#E2E8F0',
   },
+  saveButtonDisabledDark: {
+    backgroundColor: '#444',
+  },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '700',
+    color: '#FFF',
+  },
+  textDark: {
     color: '#FFF',
   },
 });

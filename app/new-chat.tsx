@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, Flat
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Search, User, Users, UserPlus, X, CheckCircle2 } from 'lucide-react-native';
 import ChatService from '../services/chatService';
+import { useTheme } from '../context/ThemeContext';
 
 type UserData = {
   id: string;
@@ -24,6 +25,7 @@ export default function NewChatScreen() {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     // Debounce pencarian untuk optimalisasi (500ms)
@@ -123,9 +125,9 @@ export default function NewChatScreen() {
           <TouchableOpacity 
             key={cat} 
             onPress={() => setSelectedCategory(cat)}
-            style={[styles.chip, selectedCategory === cat && styles.chipActive]}
+            style={[styles.chip, isDarkMode && styles.chipDark, selectedCategory === cat && styles.chipActive]}
           >
-            <Text style={[styles.chipText, selectedCategory === cat && styles.chipTextActive]}>
+            <Text style={[styles.chipText, isDarkMode && styles.textGrayDark, selectedCategory === cat && styles.chipTextActive]}>
               {cat}
             </Text>
           </TouchableOpacity>
@@ -136,50 +138,48 @@ export default function NewChatScreen() {
 
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.safeArea, isDarkMode && styles.safeAreaDark]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft color="#000" size={26} />
+            <ChevronLeft color={isDarkMode ? "#FFF" : "#000"} size={26} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Cari Koneksi</Text>
-            <Text style={styles.headerSubtitle}>Bangun koneksi baru, kembangkan jaringanmu</Text>
+            <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Cari Koneksi</Text>
+            <Text style={[styles.headerSubtitle, isDarkMode && styles.textGrayDark]}>Bangun koneksi baru, kembangkan jaringanmu</Text>
           </View>
         </View>
 
         {/* SEARCH BAR */}
-        <View style={styles.divider} />
         <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
+          <View style={[styles.searchInputContainer, isDarkMode && styles.searchInputContainerDark]}>
             <Search color="#9EA5B1" size={20} />
             <TextInput 
               placeholder="Cari nama, role, atau instansi" 
-              style={styles.searchInput} 
+              style={[styles.searchInput, isDarkMode && styles.textDark]} 
               placeholderTextColor="#9EA5B1" 
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
           </View>
         </View>
-        <View style={styles.divider} />
 
         {/* CATEGORY CHIPS */}
         {renderCategoryChips()}
 
         {/* SELECTED USERS CHIPS (NEW) */}
         {selectedUserIds.length > 0 && (
-          <View style={styles.selectedContainer}>
-            <Text style={styles.selectedStatusText}>{selectedUserIds.length} dipilih</Text>
+          <View style={[styles.selectedContainer, isDarkMode && styles.selectedContainerDark]}>
+            <Text style={[styles.selectedStatusText, isDarkMode && styles.textGrayDark]}>{selectedUserIds.length} dipilih</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectedChipsScroll}>
               {selectedUserIds.map(id => {
                 const user = users.find(u => u.id === id);
                 if (!user) return null;
                 return (
-                  <View key={id} style={styles.selectedPersonChip}>
-                    <Text style={styles.selectedPersonName}>
+                  <View key={id} style={[styles.selectedPersonChip, isDarkMode && styles.selectedPersonChipDark]}>
+                    <Text style={[styles.selectedPersonName, isDarkMode && styles.textDark]}>
                       {user.name.split(' ')[0]}
                     </Text>
                     <TouchableOpacity onPress={() => toggleSelectUser(id)} style={styles.removeChipButton}>
@@ -205,7 +205,7 @@ export default function NewChatScreen() {
               const isSelected = selectedUserIds.includes(item.id);
               return (
                 <TouchableOpacity 
-                  style={[styles.userItem, isSelected && styles.userItemSelected]} 
+                  style={[styles.userItem, isDarkMode && styles.userItemDark, isSelected && [styles.userItemSelected, isDarkMode && styles.userItemSelectedDark]]} 
                   onPress={() => toggleSelectUser(item.id)}
                   activeOpacity={0.7}
                 >
@@ -213,19 +213,19 @@ export default function NewChatScreen() {
                     {item.avatar ? (
                       <Image source={{ uri: item.avatar }} style={styles.avatarImage} />
                     ) : (
-                      <View style={styles.avatarPlaceholder}>
+                      <View style={[styles.avatarPlaceholder, isDarkMode && styles.avatarPlaceholderDark]}>
                         <User color="#BCC1C9" size={24} />
                       </View>
                     )}
                     {isSelected && (
-                      <View style={styles.checkBadge}>
-                        <CheckCircle2 color="#FFF" size={14} fill="#27AE60" />
+                      <View style={[styles.checkBadge, isDarkMode && { backgroundColor: '#1E1E1E' }]}>
+                        <CheckCircle2 color={isDarkMode ? "#1E1E1E" : "#FFF"} size={14} fill="#27AE60" />
                       </View>
                     )}
                   </View>
                   <View style={styles.userInfo}>
                     <View style={styles.nameRow}>
-                      <Text style={styles.userName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={[styles.userName, isDarkMode && styles.textDark]} numberOfLines={1}>{item.name}</Text>
                       {item.tag && (
                         <View style={styles.badge}>
                           <Text style={styles.badgeText}>{item.tag}</Text>
@@ -250,9 +250,9 @@ export default function NewChatScreen() {
         )}
 
         {/* FOOTER BUTTON */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, isDarkMode && styles.footerDark]}>
           <TouchableOpacity 
-            style={[styles.mainChatButton, selectedUserIds.length === 0 && styles.chatButtonDisabled]}
+            style={[styles.mainChatButton, selectedUserIds.length === 0 && [styles.chatButtonDisabled, isDarkMode && styles.chatButtonDisabledDark]]}
             disabled={selectedUserIds.length === 0 || isCreatingChat}
             onPress={handleStartChat}
             activeOpacity={0.8}
@@ -277,6 +277,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  safeAreaDark: {
+    backgroundColor: '#121212',
   },
   container: {
     flex: 1,
@@ -308,10 +311,16 @@ const styles = StyleSheet.create({
     height: 1.5,
     backgroundColor: '#F3F4F6',
   },
+  dividerDark: {
+    backgroundColor: '#333',
+  },
   selectedContainer: {
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#FAFAFA',
+  },
+  selectedContainerDark: {
+    backgroundColor: '#1E1E1E',
   },
   selectedStatusText: {
     fontSize: 12,
@@ -332,6 +341,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginRight: 8,
+  },
+  selectedPersonChipDark: {
+    backgroundColor: '#333',
+    borderColor: '#444',
   },
   selectedPersonName: {
     fontSize: 14,
@@ -355,6 +368,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
   },
+  searchInputContainerDark: {
+    backgroundColor: '#1E1E1E',
+  },
   searchInput: {
     flex: 1,
     marginLeft: 10,
@@ -375,6 +391,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 10,
+  },
+  chipDark: {
+    backgroundColor: '#1E1E1E',
   },
   chipActive: {
     backgroundColor: '#27AE60',
@@ -397,8 +416,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: '#FFF',
   },
+  userItemDark: {
+    backgroundColor: '#121212',
+  },
   userItemSelected: {
     backgroundColor: '#F0F9F1',
+  },
+  userItemSelectedDark: {
+    backgroundColor: '#1B2C21',
   },
   avatarWrapper: {
     marginRight: 16,
@@ -423,6 +448,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarPlaceholderDark: {
+    backgroundColor: '#333',
   },
   userInfo: {
     flex: 1,
@@ -471,6 +499,10 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
     alignItems: 'center',
   },
+  footerDark: {
+    backgroundColor: '#121212',
+    borderTopColor: '#333',
+  },
   mainChatButton: {
     width: '100%',
     height: 54,
@@ -489,6 +521,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1D5DB',
     shadowOpacity: 0,
     elevation: 0,
+  },
+  chatButtonDisabledDark: {
+    backgroundColor: '#444',
   },
   mainChatButtonText: {
     color: '#FFF',
@@ -510,5 +545,11 @@ const styles = StyleSheet.create({
     color: '#9EA5B1',
     fontSize: 15,
     fontWeight: '500',
+  },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
   },
 });

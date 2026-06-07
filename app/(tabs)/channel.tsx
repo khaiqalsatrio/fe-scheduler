@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, Platf
 import { MessageCircle, Users, Hash } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { ChannelService } from '../../services/channelService';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ChannelItemProps {
   id: string;
@@ -17,8 +18,8 @@ interface ChannelItemProps {
   color: string;
 }
 
-const ChannelCard = ({ item, onPress }: { item: ChannelItemProps, onPress?: () => void }) => (
-  <TouchableOpacity style={styles.channelItem} onPress={onPress}>
+const ChannelCard = ({ item, onPress, isDarkMode }: { item: ChannelItemProps, onPress?: () => void, isDarkMode?: boolean }) => (
+  <TouchableOpacity style={[styles.channelItem, isDarkMode && styles.channelItemDark]} onPress={onPress}>
     <View style={[styles.avatarContainer, { backgroundColor: item.color }]}>
       <Text style={styles.avatarEmoji}>{item.emoji}</Text>
     </View>
@@ -26,8 +27,8 @@ const ChannelCard = ({ item, onPress }: { item: ChannelItemProps, onPress?: () =
     <View style={styles.contentContainer}>
       <View style={styles.headerRow}>
         <View style={styles.titleWrapper}>
-          <Hash size={18} color="#94A3B8" />
-          <Text style={styles.channelTitle}>{item.title}</Text>
+          <Hash size={18} color={isDarkMode ? "#64748B" : "#94A3B8"} />
+          <Text style={[styles.channelTitle, isDarkMode && styles.textDark]}>{item.title}</Text>
           {item.joined && (
             <View style={styles.joinedBadge}>
               <Text style={styles.joinedText}>Joined</Text>
@@ -40,7 +41,7 @@ const ChannelCard = ({ item, onPress }: { item: ChannelItemProps, onPress?: () =
       <Text style={styles.categoryText}>{item.category}</Text>
       
       <View style={styles.bottomRow}>
-        <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
+        <Text style={[styles.lastMessage, isDarkMode && styles.textGrayDark]} numberOfLines={1}>{item.lastMessage}</Text>
         <View style={styles.statsWrapper}>
           <View style={styles.memberCountWrapper}>
             <Users size={12} color="#94A3B8" />
@@ -59,6 +60,7 @@ const ChannelCard = ({ item, onPress }: { item: ChannelItemProps, onPress?: () =
 
 export default function ChannelScreen() {
   const router = useRouter();
+  const { isDarkMode } = useTheme();
   const [channels, setChannels] = useState<ChannelItemProps[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -131,24 +133,24 @@ export default function ChannelScreen() {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#7C3AED" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
         <View style={styles.logoRow}>
           <Image 
             source={require('../../assets/images/logo.png')} 
             style={styles.logoImage} 
           />
-          <Text style={styles.headerTitle}>Channel</Text>
+          <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Channel</Text>
         </View>
       </View>
 
@@ -156,12 +158,12 @@ export default function ChannelScreen() {
         data={channels}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7C3AED']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7C3AED']} tintColor={isDarkMode ? "#7C3AED" : undefined} />
         }
         ListHeaderComponent={() => (
-          <View style={styles.infoBox}>
+          <View style={[styles.infoBox, isDarkMode && styles.infoBoxDark]}>
             <MessageCircle size={20} color="#7C3AED" style={styles.infoIcon} />
-            <Text style={styles.infoText}>
+            <Text style={[styles.infoText, isDarkMode && styles.infoTextDark]}>
               Ruang diskusi berbasis minat. Join channel untuk mulai berpartisipasi!
             </Text>
           </View>
@@ -173,7 +175,7 @@ export default function ChannelScreen() {
             </Text>
           </View>
         )}
-        renderItem={({ item }) => <ChannelCard item={item} onPress={() => handleChannelPress(item)} />}
+        renderItem={({ item }) => <ChannelCard item={item} onPress={() => handleChannelPress(item)} isDarkMode={isDarkMode} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
@@ -187,10 +189,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 15,
     backgroundColor: '#FFF',
+  },
+  headerDark: {
+    backgroundColor: '#121212',
   },
   logoRow: {
     flexDirection: 'row',
@@ -207,6 +215,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#000',
   },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
+  },
   infoBox: {
     flexDirection: 'row',
     backgroundColor: '#FAF5FF',
@@ -215,6 +229,9 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  infoBoxDark: {
+    backgroundColor: '#2D1B69', // Darker purple box
   },
   infoIcon: {
     marginRight: 12,
@@ -226,6 +243,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '500',
   },
+  infoTextDark: {
+    color: '#E9D5FF', // Lighter purple text
+  },
   listContent: {
     paddingBottom: 20,
   },
@@ -235,6 +255,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+  },
+  channelItemDark: {
+    borderBottomColor: '#222',
   },
   avatarContainer: {
     width: 54,

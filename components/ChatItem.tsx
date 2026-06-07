@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
 import { User, Users, Check, VolumeX, Pin } from 'lucide-react-native';
 import { CONFIG } from '../constants/Config';
+import { useTheme } from '../context/ThemeContext';
 
 interface ChatItemProps {
   name: string;
@@ -32,6 +33,8 @@ export const ChatItem: React.FC<ChatItemProps> = ({
   isMuted,
   isPinned,
 }) => {
+  const { isDarkMode } = useTheme();
+
   const getAvatarUrl = (avatarStr?: string) => {
     if (!avatarStr) return null;
     if (avatarStr.startsWith('/')) {
@@ -44,7 +47,7 @@ export const ChatItem: React.FC<ChatItemProps> = ({
 
   return (
     <TouchableOpacity 
-      style={[styles.container, isSelected && styles.selectedContainer]} 
+      style={[styles.container, isDarkMode && styles.containerDark, isSelected && (isDarkMode ? styles.selectedContainerDark : styles.selectedContainer)]} 
       onPress={onPress} 
       onLongPress={onLongPress}
       activeOpacity={0.7}
@@ -68,13 +71,13 @@ export const ChatItem: React.FC<ChatItemProps> = ({
           </View>
         )}
       </View>
-      <View style={styles.content}>
+      <View style={[styles.content, isDarkMode && styles.contentDark]}>
         <View style={styles.header}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={[styles.time, (unreadCount ?? 0) > 0 ? styles.timeUnread : null]}>{time}</Text>
+          <Text style={[styles.name, isDarkMode && styles.textDark]}>{name}</Text>
+          <Text style={[styles.time, (unreadCount ?? 0) > 0 ? styles.timeUnread : (isDarkMode ? styles.textGrayDark : null)]}>{time}</Text>
         </View>
         <View style={styles.footer}>
-          <Text style={styles.lastMessage} numberOfLines={1}>
+          <Text style={[styles.lastMessage, isDarkMode && styles.textGrayDark]} numberOfLines={1}>
             {lastMessage}
           </Text>
           {isMuted && (
@@ -102,6 +105,9 @@ const styles = StyleSheet.create({
     paddingLeft: 15,
     alignItems: 'center',
     backgroundColor: '#FFF',
+  },
+  containerDark: {
+    backgroundColor: '#121212',
   },
   avatarContainer: {
     position: 'relative',
@@ -138,6 +144,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0, 0, 0, 0.08)',
   },
+  contentDark: {
+    borderBottomColor: '#222',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -166,6 +175,12 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
+  },
   unreadBadge: {
     backgroundColor: '#25D366',
     minWidth: 20,
@@ -182,6 +197,9 @@ const styles = StyleSheet.create({
   },
   selectedContainer: {
     backgroundColor: '#E7F5FE', // Light blue tint like WA selection
+  },
+  selectedContainerDark: {
+    backgroundColor: '#1A2A2A',
   },
   selectionOverlay: {
     position: 'absolute',

@@ -19,6 +19,7 @@ import { Sparkle, AlertCircle, Search, MoreHorizontal, Plus } from 'lucide-react
 // Custom Hooks & Utils
 import { useAgenda } from '../../hooks/useAgenda';
 import { formatTimeRange } from '../../utils/dateFormatter';
+import { useTheme } from '../../context/ThemeContext';
 
 // Components
 import { DaySelector } from '../../components/agenda/DaySelector';
@@ -54,6 +55,7 @@ const HOURS = [
 
 export default function AgendaScreen() {
   const router = useRouter();
+  const { isDarkMode } = useTheme();
   const {
     activities,
     agendas,
@@ -128,8 +130,8 @@ export default function AgendaScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -138,21 +140,21 @@ export default function AgendaScreen() {
             source={require('../../assets/images/logo.png')}
             style={styles.logoImage}
           />
-          <Text style={styles.headerTitle}>Aktivity</Text>
+          <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Aktivity</Text>
         </View>
-        <TouchableOpacity style={styles.menuButton}>
-          <MoreHorizontal color="#000" size={20} />
+        <TouchableOpacity style={[styles.menuButton, isDarkMode && styles.menuButtonDark]}>
+          <MoreHorizontal color={isDarkMode ? "#FFF" : "#000"} size={20} />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar / Ask Agent */}
       <TouchableOpacity
-        style={styles.searchContainer}
+        style={[styles.searchContainer, isDarkMode && styles.searchContainerDark]}
         onPress={() => setIsAIModalVisible(true)}
         activeOpacity={0.8}
       >
-        <Search color="#9CA3AF" size={18} />
-        <Text style={styles.searchText}>Ask ChatAja Agent</Text>
+        <Search color={isDarkMode ? "#9CA3AF" : "#9CA3AF"} size={18} />
+        <Text style={[styles.searchText, isDarkMode && styles.textGrayDark]}>Ask ChatAja Agent</Text>
       </TouchableOpacity>
 
       {/* Day Selector */}
@@ -167,13 +169,13 @@ export default function AgendaScreen() {
         style={styles.timelineContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => fetchAgendas(true)} />
+          <RefreshControl refreshing={refreshing} onRefresh={() => fetchAgendas(true)} tintColor={isDarkMode ? "#10B981" : undefined} />
         }
       >
         {loading && !refreshing ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#10B981" />
-            <Text style={styles.loadingText}>Memuat kegiatan...</Text>
+            <Text style={[styles.loadingText, isDarkMode && styles.textGrayDark]}>Memuat kegiatan...</Text>
           </View>
         ) : error && agendas.length === 0 ? (
           <View style={styles.centerContainer}>
@@ -206,14 +208,14 @@ export default function AgendaScreen() {
                     ))
                   ) : (
                     <TouchableOpacity
-                      style={styles.emptySlot}
+                      style={[styles.emptySlot, isDarkMode && styles.emptySlotDark]}
                       onPress={() => {
                         setSelectedTimeSlot(formatTimeRange(hour));
                         setIsAddModalVisible(true);
                       }}
                     >
-                      <Plus size={16} color="#9CA3AF" style={{ marginRight: 4 }} />
-                      <Text style={styles.emptySlotText}>Tambah aktivitas</Text>
+                      <Plus size={16} color={isDarkMode ? "#6B7280" : "#9CA3AF"} style={{ marginRight: 4 }} />
+                      <Text style={[styles.emptySlotText, isDarkMode && styles.emptySlotTextDark]}>Tambah aktivitas</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -256,6 +258,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -278,6 +283,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#000',
   },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
+  },
   menuButton: {
     width: 36,
     height: 36,
@@ -285,6 +296,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  menuButtonDark: {
+    backgroundColor: '#1E1E1E',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -296,6 +310,9 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     gap: 8,
+  },
+  searchContainerDark: {
+    backgroundColor: '#1E1E1E',
   },
   searchText: {
     color: '#9CA3AF',
@@ -338,10 +355,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     gap: 4,
   },
+  emptySlotDark: {
+    borderColor: '#374151',
+  },
   emptySlotText: {
     fontSize: 14,
     color: '#9CA3AF',
     fontWeight: '600',
+  },
+  emptySlotTextDark: {
+    color: '#6B7280',
   },
   floatingMascot: {
     position: 'absolute',

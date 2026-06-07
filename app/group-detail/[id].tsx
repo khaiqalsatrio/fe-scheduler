@@ -5,10 +5,12 @@ import { ChevronLeft, Pencil, Users, User, LogOut, Search, Link as LinkIcon, Plu
 import { ChatService } from '../../services/chatService';
 import { AuthService } from '../../services/authService';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function GroupDetailScreen() {
   const { id, title, type } = useLocalSearchParams();
   const router = useRouter();
+  const { isDarkMode } = useTheme();
   
   const [members, setMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,12 +142,13 @@ export default function GroupDetailScreen() {
       <TouchableOpacity 
         style={[
           styles.memberItem, 
+          isDarkMode && styles.cardDark,
           isLast && styles.lastMemberItem
         ]}
         onPress={() => handleMemberClick(item)}
         activeOpacity={item.userId === currentUser?.id ? 1 : 0.7}
       >
-        <View style={styles.memberAvatar}>
+        <View style={[styles.memberAvatar, isDarkMode && styles.memberAvatarDark]}>
           {item.user?.avatar_url ? (
             <Image source={{ uri: item.user.avatar_url }} style={styles.avatarImg} />
           ) : (
@@ -153,10 +156,10 @@ export default function GroupDetailScreen() {
           )}
         </View>
         <View style={styles.memberInfo}>
-          <Text style={styles.memberName} numberOfLines={1}>
+          <Text style={[styles.memberName, isDarkMode && styles.textDark]} numberOfLines={1}>
             {item.user?.name || 'User'} {item.userId === currentUser?.id && '(Anda)'}
           </Text>
-          <Text style={styles.memberBio} numberOfLines={1}>
+          <Text style={[styles.memberBio, isDarkMode && styles.textGrayDark]} numberOfLines={1}>
             {item.user?.bio || 'Haii, saya menggunakan ChatAja!'}
           </Text>
         </View>
@@ -180,15 +183,15 @@ export default function GroupDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       
       {/* Custom Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color="#00A884" size={28} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{type === 'channel' ? 'Info Channel' : 'Info Grup'}</Text>
+        <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>{type === 'channel' ? 'Info Channel' : 'Info Grup'}</Text>
       </View>
 
       <FlatList
@@ -197,9 +200,9 @@ export default function GroupDetailScreen() {
         renderItem={renderMember}
         ListHeaderComponent={() => (
           <>
-            <View style={styles.profileSection}>
+            <View style={[styles.profileSection, isDarkMode && styles.cardDark]}>
               <View style={styles.avatarWrapper}>
-                <View style={styles.largeAvatar}>
+                <View style={[styles.largeAvatar, isDarkMode && styles.largeAvatarDark]}>
                   <Users color="#3B82F6" size={80} />
                 </View>
               </View>
@@ -219,21 +222,21 @@ export default function GroupDetailScreen() {
                   </View>
                 ) : (
                   <View style={styles.nameRow}>
-                    <Text style={styles.groupNameText}>{groupName}</Text>
+                    <Text style={[styles.groupNameText, isDarkMode && styles.textDark]}>{groupName}</Text>
                     <TouchableOpacity onPress={() => setIsEditingName(true)}>
                       <Pencil color="#00A884" size={18} style={{ marginLeft: 10 }} />
                     </TouchableOpacity>
                   </View>
                 )}
-                <Text style={styles.memberSubtitle}>{type === 'channel' ? 'Channel' : 'Grup'} · {members.length} Anggota</Text>
+                <Text style={[styles.memberSubtitle, isDarkMode && styles.textGrayDark]}>{type === 'channel' ? 'Channel' : 'Grup'} · {members.length} Anggota</Text>
               </View>
             </View>
 
             <View style={styles.membersHeader}>
               {isSearching ? (
-                <View style={styles.searchContainer}>
+                <View style={[styles.searchContainer, isDarkMode && styles.searchContainerDark]}>
                   <TextInput
-                    style={styles.searchInput}
+                    style={[styles.searchInput, isDarkMode && styles.textDark]}
                     placeholder="Cari nama anggota..."
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -245,9 +248,9 @@ export default function GroupDetailScreen() {
                 </View>
               ) : (
                 <>
-                  <Text style={styles.membersCount}>{members.length} anggota</Text>
+                  <Text style={[styles.membersCount, isDarkMode && styles.textDark]}>{members.length} anggota</Text>
                   <TouchableOpacity 
-                    style={styles.searchCircleBtn}
+                    style={[styles.searchCircleBtn, isDarkMode && styles.searchCircleBtnDark]}
                     onPress={() => setIsSearching(true)}
                   >
                     <Search color="#00A884" size={18} />
@@ -258,9 +261,10 @@ export default function GroupDetailScreen() {
 
             <View style={[
               styles.mainCard,
+              isDarkMode && styles.cardDark,
               filteredMembers.length === 0 && { borderBottomLeftRadius: 20, borderBottomRightRadius: 20, borderBottomWidth: 0 }
             ]}>
-              <TouchableOpacity style={styles.addMemberRow}>
+              <TouchableOpacity style={[styles.addMemberRow, isDarkMode && styles.cardDark]}>
                 <View style={styles.actionIconCircle}>
                   <Plus color="#FFF" size={22} />
                 </View>
@@ -271,7 +275,7 @@ export default function GroupDetailScreen() {
         )}
         ListFooterComponent={() => (
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.leaveRow} onPress={handleLeaveGroup}>
+            <TouchableOpacity style={[styles.leaveRow, isDarkMode && styles.cardDark]} onPress={handleLeaveGroup}>
               <LogOut color="#FF3B30" size={22} />
               <Text style={styles.leaveText}>{type === 'channel' ? 'Keluar Channel' : 'Keluar Grup'}</Text>
             </TouchableOpacity>
@@ -314,12 +318,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F2F5',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     height: 60,
     backgroundColor: '#F0F2F5',
+  },
+  headerDark: {
+    backgroundColor: '#121212',
   },
   backButton: {
     padding: 5,
@@ -355,6 +365,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0EEFF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  largeAvatarDark: {
+    backgroundColor: '#1E3A8A',
   },
   avatarImg: {
     width: 150,
@@ -425,6 +438,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     height: 40,
   },
+  searchContainerDark: {
+    backgroundColor: '#333',
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
@@ -443,6 +459,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8E8E8',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  searchCircleBtnDark: {
+    backgroundColor: '#333',
   },
   mainCard: {
     backgroundColor: '#FFF',
@@ -498,6 +517,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
+  cardDark: {
+    backgroundColor: '#1E1E1E',
+    borderBottomColor: '#333',
+  },
   lastMemberItem: {
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
@@ -512,6 +535,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  memberAvatarDark: {
+    backgroundColor: '#333',
   },
   memberInfo: {
     flex: 1,
@@ -562,5 +588,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
+  },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
   },
 });

@@ -14,11 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2, FileText, Wand2, Sparkles, Copy } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { DocumentService } from '../../services/documentService';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function DocumentDetailScreen() {
   const { url, title, id } = useLocalSearchParams<{ url: string; title: string; id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export default function DocumentDetailScreen() {
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         return (
-          <Text key={index} style={{ fontWeight: 'bold', color: '#111' }}>
+          <Text key={index} style={{ fontWeight: 'bold', color: isDarkMode ? '#FFF' : '#111' }}>
             {part.slice(2, -2)}
           </Text>
         );
@@ -84,47 +86,48 @@ export default function DocumentDetailScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, isDarkMode && styles.containerDark, { paddingTop: insets.top }]}>
       <Header
         title="Document Detail"
         onBack={() => router.back()}
         onShare={handleShare}
+        isDarkMode={isDarkMode}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.detailCard}>
-          <View style={styles.documentPaperCard}>
-            <FileText color="#111" size={56} />
-            <View style={styles.pdfBadge}>
-              <Text style={styles.pdfBadgeText}>PDF</Text>
+          <View style={[styles.documentPaperCard, isDarkMode && styles.documentPaperCardDark]}>
+            <FileText color={isDarkMode ? "#FFF" : "#111"} size={56} />
+            <View style={[styles.pdfBadge, isDarkMode && styles.pdfBadgeDark]}>
+              <Text style={[styles.pdfBadgeText, isDarkMode && styles.textDark]}>PDF</Text>
             </View>
           </View>
-          <Text style={styles.docTitle}>{title || 'Untitled Document'}</Text>
+          <Text style={[styles.docTitle, isDarkMode && styles.textDark]}>{title || 'Untitled Document'}</Text>
           <Text style={styles.docSubtitle}>File is ready to be summarized</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.analyzeButton}
+          style={[styles.analyzeButton, isDarkMode && styles.analyzeButtonDark]}
           onPress={handleAnalyze}
           disabled={isAnalyzing}
         >
           {isAnalyzing ? (
-            <ActivityIndicator size="small" color="#FFF" />
+            <ActivityIndicator size="small" color={isDarkMode ? "#000" : "#FFF"} />
           ) : (
-            <Sparkles color="#FFF" size={20} />
+            <Sparkles color={isDarkMode ? "#000" : "#FFF"} size={20} />
           )}
-          <Text style={styles.analyzeButtonText}>
+          <Text style={[styles.analyzeButtonText, isDarkMode && styles.analyzeButtonTextDark]}>
             {isAnalyzing ? 'Generating Summary...' : 'Generate Summary'}
           </Text>
         </TouchableOpacity>
 
         {analysisResult && (
-          <View style={styles.resultContainer}>
-            <View style={[styles.resultHeader, { justifyContent: 'space-between' }]}>
+          <View style={[styles.resultContainer, isDarkMode && styles.resultContainerDark]}>
+            <View style={[styles.resultHeader, isDarkMode && styles.resultHeaderDark, { justifyContent: 'space-between' }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Sparkles color="#000" size={18} />
-                <Text style={styles.resultTitleText}>Hasil Summary Tera AI</Text>
-                <View style={styles.betaBadge}>
+                <Sparkles color={isDarkMode ? "#FFF" : "#000"} size={18} />
+                <Text style={[styles.resultTitleText, isDarkMode && styles.textDark]}>Hasil Summary Tera AI</Text>
+                <View style={[styles.betaBadge, isDarkMode && styles.betaBadgeDark]}>
                   <Text style={styles.betaText}>BETA</Text>
                 </View>
               </View>
@@ -132,7 +135,7 @@ export default function DocumentDetailScreen() {
                 <Copy color="#6B7280" size={18} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.resultText}>{renderFormattedText(analysisResult)}</Text>
+            <Text style={[styles.resultText, isDarkMode && styles.textGrayDark]}>{renderFormattedText(analysisResult)}</Text>
           </View>
         )}
       </ScrollView>
@@ -145,20 +148,21 @@ interface HeaderProps {
   title: string;
   onBack: () => void;
   onShare?: () => void;
+  isDarkMode?: boolean;
 }
 
-function Header({ title, onBack, onShare }: HeaderProps) {
+function Header({ title, onBack, onShare, isDarkMode }: HeaderProps) {
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, isDarkMode && styles.headerDark]}>
       <TouchableOpacity style={styles.iconButton} onPress={onBack} accessibilityLabel="Kembali">
-        <ArrowLeft color="#111" size={24} />
+        <ArrowLeft color={isDarkMode ? "#FFF" : "#111"} size={24} />
       </TouchableOpacity>
-      <Text style={styles.headerTitle} numberOfLines={1}>
+      <Text style={[styles.headerTitle, isDarkMode && styles.textDark]} numberOfLines={1}>
         {title}
       </Text>
       {onShare ? (
         <TouchableOpacity style={styles.iconButton} onPress={onShare} accessibilityLabel="Bagikan">
-          <Share2 color="#111" size={20} />
+          <Share2 color={isDarkMode ? "#FFF" : "#111"} size={20} />
         </TouchableOpacity>
       ) : (
         <View style={{ width: 40 }} />
@@ -172,6 +176,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,6 +187,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+  },
+  headerDark: {
+    borderBottomColor: '#333',
   },
   iconButton: {
     width: 40,
@@ -221,12 +231,19 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
+  documentPaperCardDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
+  },
   pdfBadge: {
     marginTop: 12,
     backgroundColor: '#111',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+  },
+  pdfBadgeDark: {
+    backgroundColor: '#333',
   },
   pdfBadgeText: {
     color: '#FFF',
@@ -257,10 +274,16 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
   },
+  analyzeButtonDark: {
+    backgroundColor: '#FFF',
+  },
   analyzeButtonText: {
     color: '#FFF',
     fontSize: 15,
     fontWeight: '600',
+  },
+  analyzeButtonTextDark: {
+    color: '#000',
   },
   resultContainer: {
     marginTop: 32,
@@ -271,6 +294,10 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     overflow: 'hidden',
   },
+  resultContainerDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
+  },
   resultHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -279,6 +306,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  resultHeaderDark: {
+    backgroundColor: '#2A2A2A',
+    borderBottomColor: '#444',
   },
   resultTitleText: {
     fontSize: 14,
@@ -295,6 +326,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
+  betaBadgeDark: {
+    backgroundColor: '#333',
+    borderColor: '#444',
+  },
   betaText: {
     fontSize: 10,
     fontWeight: 'bold',
@@ -305,5 +340,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 24,
+  },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#D1D5DB',
   },
 });

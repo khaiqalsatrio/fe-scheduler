@@ -4,6 +4,7 @@ import { Paperclip, Mic, Send, X, Check, Square } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
+import { useTheme } from '../context/ThemeContext';
 
 interface ChatInputProps {
   onSend?: (text: string) => void;
@@ -34,6 +35,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     if (isEditing && editInitialText) {
@@ -174,56 +176,56 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <View style={styles.mainContainer}>
+      <View style={[styles.mainContainer, isDarkMode && styles.mainContainerDark]}>
         {replyingTo && !isEditing && (
-          <View style={styles.topBarContainer}>
+          <View style={[styles.topBarContainer, isDarkMode && styles.topBarContainerDark]}>
             <View style={styles.replyBar} />
             <View style={styles.contentArea}>
               <Text style={styles.topBarName}>{replyingTo.name}</Text>
-              <Text style={styles.topBarText} numberOfLines={1}>{replyingTo.text}</Text>
+              <Text style={[styles.topBarText, isDarkMode && styles.textGrayDark]} numberOfLines={1}>{replyingTo.text}</Text>
             </View>
             <TouchableOpacity style={styles.cancelButton} onPress={onCancelReply}>
-              <X size={16} color="#999" />
+              <X size={16} color={isDarkMode ? "#CCC" : "#999"} />
             </TouchableOpacity>
           </View>
         )}
 
         {isEditing && (
-          <View style={styles.topBarContainer}>
+          <View style={[styles.topBarContainer, isDarkMode && styles.topBarContainerDark]}>
             <View style={[styles.replyBar, { backgroundColor: '#FFC107' }]} />
             <View style={styles.contentArea}>
               <Text style={[styles.topBarName, { color: '#FFC107' }]}>Mengedit pesan</Text>
-              <Text style={styles.topBarText} numberOfLines={1}>{editInitialText}</Text>
+              <Text style={[styles.topBarText, isDarkMode && styles.textGrayDark]} numberOfLines={1}>{editInitialText}</Text>
             </View>
             <TouchableOpacity style={styles.cancelButton} onPress={onCancelEdit}>
-              <X size={16} color="#999" />
+              <X size={16} color={isDarkMode ? "#CCC" : "#999"} />
             </TouchableOpacity>
           </View>
         )}
 
         <View style={styles.container}>
-          <View style={styles.inputWrapper}>
+          <View style={[styles.inputWrapper, isDarkMode && styles.inputWrapperDark]}>
             {isRecording ? (
               <View style={styles.recordingOverlay}>
                 <View style={styles.recordingDot} />
                 <Text style={styles.recordingTimer}>{formatDuration(recordingDuration)}</Text>
-                <Text style={styles.recordingHint}>Merekam...</Text>
+                <Text style={[styles.recordingHint, isDarkMode && styles.textGrayDark]}>Merekam...</Text>
                 <TouchableOpacity onPress={cancelRecording} style={styles.cancelRecordingBtn}>
-                  <Text style={styles.cancelRecordingText}>Batal</Text>
+                  <Text style={[styles.cancelRecordingText, isDarkMode && styles.textGrayDark]}>Batal</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, isDarkMode && styles.textDark]}
                   placeholder="Message or mention @"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={isDarkMode ? "#AAA" : "#999"}
                   value={text}
                   onChangeText={setText}
                   multiline
                 />
                 <TouchableOpacity style={styles.iconButton} onPress={pickDocument}>
-                  <Paperclip color="#666" size={22} />
+                  <Paperclip color={isDarkMode ? "#CCC" : "#666"} size={22} />
                 </TouchableOpacity>
               </>
             )}
@@ -260,6 +262,10 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E0E0E0',
   },
+  mainContainerDark: {
+    backgroundColor: '#0B141A',
+    borderTopColor: '#1E1E1E',
+  },
   topBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -276,6 +282,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -1 },
     shadowOpacity: 0.1,
     shadowRadius: 1,
+  },
+  topBarContainerDark: {
+    backgroundColor: '#1E1E1E',
   },
   replyBar: {
     width: 4,
@@ -321,6 +330,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },
+  inputWrapperDark: {
+    backgroundColor: '#1E1E1E',
   },
   input: {
     flex: 1,
@@ -379,5 +391,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     fontWeight: '600',
+  },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
   },
 });

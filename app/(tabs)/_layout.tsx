@@ -5,12 +5,14 @@ import { OnboardingProvider, useOnboarding } from '../../context/OnboardingConte
 import { OnboardingOverlay } from '../../components/onboarding/OnboardingOverlay';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../context/ThemeContext';
 
 const TabIcon = ({ Icon, focused, color }: { Icon: any; focused: boolean; color: string }) => {
+  const { isDarkMode } = useTheme();
   return (
     <View style={[
       styles.iconWrapper,
-      focused && styles.pillContainer
+      focused && (isDarkMode ? styles.pillContainerDark : styles.pillContainer)
     ]}>
       <Icon size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
     </View>
@@ -38,16 +40,18 @@ const GlobalOnboarding = () => {
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { isDarkMode } = useTheme();
 
   return (
     <OnboardingProvider>
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#065F46', // Dark green for text/icon
-          tabBarInactiveTintColor: '#666',
+          tabBarActiveTintColor: isDarkMode ? '#10B981' : '#065F46', 
+          tabBarInactiveTintColor: isDarkMode ? '#9CA3AF' : '#666',
           tabBarStyle: [
             styles.tabBar,
+            isDarkMode && styles.tabBarDark,
             {
               height: 60 + insets.bottom,
               paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
@@ -159,6 +163,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
   },
+  tabBarDark: {
+    backgroundColor: '#1E1E1E',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    elevation: 0,
+    shadowOpacity: 0,
+  },
   tabBarLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -173,5 +184,8 @@ const styles = StyleSheet.create({
   },
   pillContainer: {
     backgroundColor: '#D1FAE5', // Light green pill
+  },
+  pillContainerDark: {
+    backgroundColor: '#064E3B', // Dark green pill
   },
 });

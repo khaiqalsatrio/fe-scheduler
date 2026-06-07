@@ -20,7 +20,6 @@ export const useChatSocket = (conversationId: string) => {
       const token = await SecureStore.getItemAsync(CONFIG.AUTH_TOKEN_KEY);
       if (!token) return;
 
-      // Ambil My ID dari token
       const userId = TokenUtils.getUserId(token);
       if (userId) {
         setMyId(userId);

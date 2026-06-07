@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface Day {
   id: number;
@@ -14,8 +15,10 @@ interface DaySelectorProps {
 }
 
 export const DaySelector: React.FC<DaySelectorProps> = ({ days, selectedDay, onSelectDay }) => {
+  const { isDarkMode } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>
       <View style={styles.row}>
         {days.map((day) => {
           const isActive = selectedDay === day.id;
@@ -31,12 +34,14 @@ export const DaySelector: React.FC<DaySelectorProps> = ({ days, selectedDay, onS
             >
               <Text style={[
                 styles.dayLabel,
+                isDarkMode && styles.textGrayDark,
                 isActive && styles.dayLabelActive
               ]}>
                 {day.label}
               </Text>
               <Text style={[
                 styles.dayDate,
+                isDarkMode && styles.textDark,
                 isActive && styles.dayDateActive
               ]}>
                 {day.date}
@@ -55,6 +60,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+  },
+  containerDark: {
+    backgroundColor: '#121212',
+    borderBottomColor: '#222',
   },
   row: {
     flexDirection: 'row',
@@ -89,6 +98,12 @@ const styles = StyleSheet.create({
   },
   dayDateActive: {
     color: '#FFF',
+  },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
   },
 });
 

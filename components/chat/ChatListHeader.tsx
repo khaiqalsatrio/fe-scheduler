@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Image, Platform, StatusBar } 
 import { ArrowLeft, Pin, Bell, BellOff, Archive, Trash2, MoreVertical } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { ChatListItem } from '../../types/chat';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ChatListHeaderProps {
   selectedChatIds: string[];
@@ -24,6 +25,7 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
   onDelete,
 }) => {
   const router = useRouter();
+  const { isDarkMode } = useTheme();
   const isSelected = selectedChatIds.length > 0;
 
   const selectedChats = chats.filter(c => selectedChatIds.includes(c.id));
@@ -31,7 +33,7 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
   const allMuted = selectedChats.every(c => c.isMuted);
 
   return (
-    <View style={[styles.headerSafeArea, isSelected && styles.headerSelected]}>
+    <View style={[styles.headerSafeArea, isDarkMode && styles.headerSafeAreaDark, isSelected && styles.headerSelected]}>
       {isSelected ? (
         <View style={styles.header}>
           <View style={styles.logoContainer}>
@@ -71,11 +73,11 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
               source={require('../../assets/images/logo.png')}
               style={styles.logoImage}
             />
-            <Text style={styles.headerTitle}>Chat</Text>
+            <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Chat</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/profile' as any)}>
-              <MoreVertical color="#333" size={24} />
+              <MoreVertical color={isDarkMode ? "#FFF" : "#333"} size={24} />
             </TouchableOpacity>
           </View>
         </View>
@@ -88,6 +90,12 @@ const styles = StyleSheet.create({
   headerSafeArea: {
     backgroundColor: '#FFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  headerSafeAreaDark: {
+    backgroundColor: '#121212',
+  },
+  textDark: {
+    color: '#FFF',
   },
   headerSelected: {
     backgroundColor: '#075E54',

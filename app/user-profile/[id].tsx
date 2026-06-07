@@ -5,10 +5,12 @@ import { ChevronLeft, ChevronRight, User, MessageSquare, Phone, Video, Info, Bel
 import { ChatService } from '../../services/chatService';
 import { AuthService } from '../../services/authService';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function UserProfileScreen() {
   const { id, title } = useLocalSearchParams();
   const router = useRouter();
+  const { isDarkMode } = useTheme();
 
   const [targetUser, setTargetUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,15 +77,15 @@ export default function UserProfileScreen() {
   const brandColor = "#10C855"; // Green color
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+    <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#121212" : "#FFF"} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isDarkMode && styles.headerDark]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={brandColor} size={28} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Info Kontak</Text>
+        <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Info Kontak</Text>
         <TouchableOpacity style={styles.headerMoreButton}>
           <MoreVertical color={brandColor} size={24} />
         </TouchableOpacity>
@@ -91,31 +93,31 @@ export default function UserProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Profile Info Section */}
-        <View style={styles.profileSection}>
+        <View style={[styles.profileSection, isDarkMode && styles.cardDark]}>
           <View style={styles.avatarWrapper}>
             {profileAvatar ? (
               <Image source={{ uri: profileAvatar }} style={styles.largeAvatarImg} />
             ) : (
-              <View style={styles.largeAvatarPlaceholder}>
+              <View style={[styles.largeAvatarPlaceholder, isDarkMode && styles.largeAvatarPlaceholderDark]}>
                 <User color="#FFF" size={60} />
               </View>
             )}
-            <View style={styles.onlineIndicator} />
+            <View style={[styles.onlineIndicator, isDarkMode && { borderColor: '#1E1E1E' }]} />
           </View>
-          <Text style={styles.nameText}>{profileName}</Text>
-          <Text style={styles.emailText}>{targetUser?.email || `${profileName.toLowerCase().replace(/\s+/g, '')}@gmail.com`}</Text>
+          <Text style={[styles.nameText, isDarkMode && styles.textDark]}>{profileName}</Text>
+          <Text style={[styles.emailText, isDarkMode && styles.textGrayDark]}>{targetUser?.email || `${profileName.toLowerCase().replace(/\s+/g, '')}@gmail.com`}</Text>
 
           {/* Action Buttons */}
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.back()}>
+            <TouchableOpacity style={[styles.actionBtn, isDarkMode && styles.actionBtnDark]} onPress={() => router.back()}>
               <MessageSquare color={brandColor} size={20} />
               <Text style={styles.actionBtnText}>Chat</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn}>
+            <TouchableOpacity style={[styles.actionBtn, isDarkMode && styles.actionBtnDark]}>
               <Phone color={brandColor} size={20} />
               <Text style={styles.actionBtnText}>Audio</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn}>
+            <TouchableOpacity style={[styles.actionBtn, isDarkMode && styles.actionBtnDark]}>
               <Video color={brandColor} size={20} />
               <Text style={styles.actionBtnText}>Video</Text>
             </TouchableOpacity>
@@ -123,15 +125,15 @@ export default function UserProfileScreen() {
         </View>
 
         {/* Bio / About Section */}
-        <View style={styles.cardSection}>
+        <View style={[styles.cardSection, isDarkMode && styles.cardDark]}>
           <Text style={styles.sectionTitle}>Info</Text>
-          <Text style={styles.infoText}>{profileBio}</Text>
+          <Text style={[styles.infoText, isDarkMode && styles.textDark]}>{profileBio}</Text>
           <Text style={styles.dateText}>20 Januari 2024</Text>
         </View>
 
         {/* Media & Docs Section */}
-        <TouchableOpacity style={styles.cardSectionRow}>
-          <Text style={styles.rowTitle}>Media, tautan, dan dok</Text>
+        <TouchableOpacity style={[styles.cardSectionRow, isDarkMode && styles.cardDark]}>
+          <Text style={[styles.rowTitle, isDarkMode && styles.textDark]}>Media, tautan, dan dok</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.rowValue}>0</Text>
             <ChevronRight color="#999" size={20} />
@@ -139,33 +141,33 @@ export default function UserProfileScreen() {
         </TouchableOpacity>
 
         {/* Settings Section */}
-        <View style={styles.cardSection}>
-          <TouchableOpacity style={styles.actionItemRow}>
-            <Bell color="#444" size={22} style={styles.actionItemIcon} />
-            <Text style={styles.actionItemText}>Bisukan notifikasi</Text>
+        <View style={[styles.cardSection, isDarkMode && styles.cardDark]}>
+          <TouchableOpacity style={[styles.actionItemRow, isDarkMode && styles.actionItemRowDark]}>
+            <Bell color={isDarkMode ? "#FFF" : "#444"} size={22} style={styles.actionItemIcon} />
+            <Text style={[styles.actionItemText, isDarkMode && styles.textDark]}>Bisukan notifikasi</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionItemRow, { borderBottomWidth: 0, paddingBottom: 5 }]}>
-            <ImageIcon color="#444" size={22} style={styles.actionItemIcon} />
-            <Text style={styles.actionItemText}>Simpan ke rol kamera</Text>
+          <TouchableOpacity style={[styles.actionItemRow, isDarkMode && styles.actionItemRowDark, { borderBottomWidth: 0, paddingBottom: 5 }]}>
+            <ImageIcon color={isDarkMode ? "#FFF" : "#444"} size={22} style={styles.actionItemIcon} />
+            <Text style={[styles.actionItemText, isDarkMode && styles.textDark]}>Simpan ke rol kamera</Text>
           </TouchableOpacity>
 
           {/* Media Placeholders */}
           <View style={styles.mediaPlaceholdersRow}>
-            <View style={styles.mediaPlaceholder}>
+            <View style={[styles.mediaPlaceholder, isDarkMode && styles.mediaPlaceholderDark]}>
               <ImageIcon color="#888" size={24} />
             </View>
-            <View style={styles.mediaPlaceholder}>
+            <View style={[styles.mediaPlaceholder, isDarkMode && styles.mediaPlaceholderDark]}>
               <LinkIcon color="#888" size={24} />
             </View>
-            <View style={styles.mediaPlaceholder}>
+            <View style={[styles.mediaPlaceholder, isDarkMode && styles.mediaPlaceholderDark]}>
               <FileText color="#888" size={24} />
             </View>
           </View>
         </View>
 
         {/* Destructive Actions */}
-        <View style={[styles.cardSection, { marginBottom: 30 }]}>
-          <TouchableOpacity style={styles.actionItemRow}>
+        <View style={[styles.cardSection, isDarkMode && styles.cardDark, { marginBottom: 30 }]}>
+          <TouchableOpacity style={[styles.actionItemRow, isDarkMode && styles.actionItemRowDark]}>
             <Ban color="#D32F2F" size={22} style={styles.actionItemIcon} />
             <Text style={[styles.actionItemText, { color: '#D32F2F' }]}>Blokir {profileName}</Text>
           </TouchableOpacity>
@@ -196,6 +198,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -203,6 +208,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     height: 60,
     backgroundColor: '#FAFAFA',
+  },
+  headerDark: {
+    backgroundColor: '#121212',
   },
   backButton: {
     padding: 5,
@@ -243,6 +251,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  largeAvatarPlaceholderDark: {
+    backgroundColor: '#333',
+  },
   onlineIndicator: {
     position: 'absolute',
     bottom: 5,
@@ -280,6 +291,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
+  actionBtnDark: {
+    backgroundColor: '#2A2A2A',
+  },
   actionBtnText: {
     marginTop: 6,
     fontSize: 13,
@@ -300,6 +314,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  cardDark: {
+    backgroundColor: '#1E1E1E',
   },
   sectionTitle: {
     fontSize: 14,
@@ -333,6 +350,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#EEE',
   },
+  actionItemRowDark: {
+    borderBottomColor: '#333',
+  },
   actionItemIcon: {
     marginRight: 15,
   },
@@ -352,5 +372,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-  }
+  },
+  mediaPlaceholderDark: {
+    backgroundColor: '#333',
+  },
+  textDark: {
+    color: '#FFF',
+  },
+  textGrayDark: {
+    color: '#AAA',
+  },
 });

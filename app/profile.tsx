@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar, ActivityIndicator, Modal, TextInput, Alert, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, User, Bell, LogOut, ChevronRight, Camera, Lock, Eye, EyeOff, MessageSquare, Database, HelpCircle } from 'lucide-react-native';
+import { X, User, Bell, LogOut, ChevronRight, Camera, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react-native';
 import AuthService from '../services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import { CONFIG } from '../constants/Config';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { isDarkMode, setTheme } = useTheme();
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -167,33 +169,33 @@ export default function ProfileScreen() {
     }
   };
 
-  const MenuListItem = ({ icon, title, description, isLast = false, onPress }: { icon: any, title: string, description?: string, isLast?: boolean, onPress?: () => void }) => (
+  const MenuListItem = ({ icon, title, description, isLast = false, onPress, rightElement }: { icon: any, title: string, description?: string, isLast?: boolean, onPress?: () => void, rightElement?: React.ReactNode }) => (
     <TouchableOpacity
-      style={[styles.menuItem, isLast && styles.noBorder]}
-      activeOpacity={0.7}
+      style={[styles.menuItem, isDarkMode && styles.menuItemDark, isLast && styles.noBorder]}
+      activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
     >
       <View style={styles.menuIconContainer}>
         {icon}
       </View>
       <View style={styles.menuTextContainer}>
-        <Text style={styles.menuTitle}>{title}</Text>
+        <Text style={[styles.menuTitle, isDarkMode && styles.textDark]}>{title}</Text>
         {description && <Text style={styles.menuDescription}>{description}</Text>}
       </View>
-      <ChevronRight size={18} color="#CCC" />
+      {rightElement ? rightElement : (onPress ? <ChevronRight size={18} color={isDarkMode ? "#666" : "#CCC"} /> : null)}
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && styles.safeAreaDark]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <View style={[styles.container, isDarkMode && styles.containerDark]}>
         {/* HEADER */}
-        <View style={styles.header}>
+        <View style={[styles.header, isDarkMode && styles.headerDark]}>
           <TouchableOpacity onPress={handleBack} style={styles.closeButton}>
-            <X size={28} color="#000" />
+            <X size={28} color={isDarkMode ? "#FFF" : "#000"} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Profile</Text>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -221,30 +223,43 @@ export default function ProfileScreen() {
               )}
             </TouchableOpacity>
             <View style={styles.userTextContainer}>
-              <Text style={styles.userName}>{userData.name}</Text>
+              <Text style={[styles.userName, isDarkMode && styles.textDark]}>{userData.name}</Text>
               <Text style={styles.userPhone}>@{userData.username || userData.email.split('@')[0]}</Text>
             </View>
           </View>
 
           <Text style={styles.sectionTitle}>PREFERENCES</Text>
           {/* MENU CARD */}
-          <View style={styles.menuCard}>
+          <View style={[styles.menuCard, isDarkMode && styles.menuCardDark]}>
             <MenuListItem
-              icon={<User size={20} color="#000" />}
+              icon={<User size={20} color={isDarkMode ? "#FFF" : "#000"} />}
               title="Personal Data"
               description="Edit nama, email, alamat"
               onPress={isLoggedIn ? openPersonalDataModal : undefined}
             />
             {isLoggedIn && (
               <MenuListItem
-                icon={<Lock size={20} color="#000" />}
+                icon={<Lock size={20} color={isDarkMode ? "#FFF" : "#000"} />}
                 title="Update Password"
                 description="Ubah kata sandi akun"
                 onPress={() => setIsPasswordModalVisible(true)}
               />
             )}
             <MenuListItem
-              icon={<Bell size={20} color="#000" />}
+              icon={isDarkMode ? <Moon size={20} color="#FFF" /> : <Sun size={20} color="#000" />}
+              title="Dark Mode"
+              description="Tema gelap aplikasi"
+              rightElement={
+                <Switch
+                  value={isDarkMode}
+                  onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
+                  trackColor={{ false: "#767577", true: "#0F9D58" }}
+                  thumbColor={isDarkMode ? "#FFF" : "#f4f3f4"}
+                />
+              }
+            />
+            <MenuListItem
+              icon={<Bell size={20} color={isDarkMode ? "#FFF" : "#000"} />}
               title="Notifications"
               description="Atur preferensi notifikasi"
               isLast={true}
@@ -254,7 +269,7 @@ export default function ProfileScreen() {
           {/* AUTH BUTTON */}
           {isLoggedIn ? (
             <TouchableOpacity
-              style={styles.logoutButton}
+              style={[styles.logoutButton, isDarkMode && styles.logoutButtonDark]}
               activeOpacity={0.8}
               onPress={handleLogout}
             >
@@ -263,12 +278,12 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.logoutButton, { borderColor: '#000' }]}
+              style={[styles.logoutButton, isDarkMode ? styles.logoutButtonDarkOutline : { borderColor: '#000' }]}
               activeOpacity={0.8}
               onPress={handleLogin}
             >
-              <User size={20} color="#000" />
-              <Text style={[styles.logoutText, { color: '#000' }]}>LOG IN</Text>
+              <User size={20} color={isDarkMode ? "#FFF" : "#000"} />
+              <Text style={[styles.logoutText, isDarkMode ? { color: '#FFF' } : { color: '#000' }]}>LOG IN</Text>
             </TouchableOpacity>
           )}
 
@@ -286,12 +301,12 @@ export default function ProfileScreen() {
           onRequestClose={() => setIsPasswordModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Update Password</Text>
+            <View style={[styles.modalContent, isDarkMode && styles.modalContentDark]}>
+              <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>Update Password</Text>
 
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                 <TextInput
-                  style={styles.modalInput}
+                  style={[styles.modalInput, isDarkMode && styles.textDark]}
                   placeholder="Old Password"
                   secureTextEntry={!showOldPassword}
                   value={oldPassword}
@@ -303,9 +318,9 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                 <TextInput
-                  style={styles.modalInput}
+                  style={[styles.modalInput, isDarkMode && styles.textDark]}
                   placeholder="New Password"
                   secureTextEntry={!showNewPassword}
                   value={newPassword}
@@ -354,14 +369,14 @@ export default function ProfileScreen() {
           onRequestClose={() => setIsPersonalDataModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-              <Text style={styles.modalTitle}>Personal Data</Text>
+            <View style={[styles.modalContent, { maxHeight: '80%' }, isDarkMode && styles.modalContentDark]}>
+              <Text style={[styles.modalTitle, isDarkMode && styles.textDark]}>Personal Data</Text>
 
               <ScrollView style={{ width: '100%', marginBottom: 15 }} showsVerticalScrollIndicator={false}>
-                <Text style={styles.inputLabel}>Name</Text>
-                <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>Name</Text>
+                <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                   <TextInput
-                    style={styles.modalInput}
+                    style={[styles.modalInput, isDarkMode && styles.textDark]}
                     placeholder="Full Name"
                     value={personalDataForm.name}
                     onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, name: text }))}
@@ -369,10 +384,10 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <Text style={styles.inputLabel}>Email</Text>
-                <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>Email</Text>
+                <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                   <TextInput
-                    style={styles.modalInput}
+                    style={[styles.modalInput, isDarkMode && styles.textDark]}
                     placeholder="Email Address"
                     value={personalDataForm.email}
                     onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, email: text }))}
@@ -382,10 +397,10 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <Text style={styles.inputLabel}>Username</Text>
-                <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>Username</Text>
+                <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                   <TextInput
-                    style={styles.modalInput}
+                    style={[styles.modalInput, isDarkMode && styles.textDark]}
                     placeholder="Username"
                     value={personalDataForm.username}
                     onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, username: text }))}
@@ -394,10 +409,10 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <Text style={styles.inputLabel}>Phone Number</Text>
-                <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>Phone Number</Text>
+                <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                   <TextInput
-                    style={styles.modalInput}
+                    style={[styles.modalInput, isDarkMode && styles.textDark]}
                     placeholder="Phone Number"
                     value={personalDataForm.phone}
                     onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, phone: text }))}
@@ -406,10 +421,10 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <Text style={styles.inputLabel}>NIK</Text>
-                <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>NIK</Text>
+                <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                   <TextInput
-                    style={styles.modalInput}
+                    style={[styles.modalInput, isDarkMode && styles.textDark]}
                     placeholder="National ID (NIK)"
                     value={personalDataForm.nik}
                     onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, nik: text }))}
@@ -418,10 +433,10 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <Text style={styles.inputLabel}>Position</Text>
-                <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, isDarkMode && styles.textDark]}>Position</Text>
+                <View style={[styles.inputContainer, isDarkMode && styles.inputContainerDark]}>
                   <TextInput
-                    style={styles.modalInput}
+                    style={[styles.modalInput, isDarkMode && styles.textDark]}
                     placeholder="Job Position"
                     value={personalDataForm.position}
                     onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, position: text }))}
@@ -461,6 +476,41 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeAreaDark: {
+    backgroundColor: '#121212',
+  },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
+  headerDark: {
+    backgroundColor: '#121212',
+    borderBottomColor: '#222',
+  },
+  textDark: {
+    color: '#FFF',
+  },
+  menuCardDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
+  },
+  menuItemDark: {
+    borderBottomColor: '#333',
+  },
+  logoutButtonDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
+  },
+  logoutButtonDarkOutline: {
+    backgroundColor: 'transparent',
+    borderColor: '#FFF',
+  },
+  modalContentDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  inputContainerDark: {
+    backgroundColor: '#121212',
+    borderColor: '#333',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#FFF',
