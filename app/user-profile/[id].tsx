@@ -72,7 +72,7 @@ export default function UserProfileScreen() {
   const profileName = targetUser?.name || title || 'User';
   const profileBio = targetUser?.bio || 'Haii, saya menggunakan aplikasi ini!';
   const profileAvatar = targetUser?.avatar_url;
-  const brandColor = "#4A37EE"; // Blueish-purple from screenshot
+  const brandColor = "#10C855"; // Green color
 
   return (
     <SafeAreaView style={styles.container}>
@@ -276,14 +276,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EFEFFF',
+    backgroundColor: '#EAF9F0',
     paddingVertical: 12,
     borderRadius: 12,
   },
   actionBtnText: {
     marginTop: 6,
     fontSize: 13,
-    color: '#4A37EE',
+    color: '#10C855',
     fontWeight: '600',
   },
   cardSection: {

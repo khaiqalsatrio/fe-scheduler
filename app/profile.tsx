@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, User, CreditCard, Bell, History, LogOut, ChevronRight, Camera } from 'lucide-react-native';
+import { X, User, Bell, LogOut, ChevronRight, Camera, Lock, Eye, EyeOff, MessageSquare, Database, HelpCircle } from 'lucide-react-native';
 import AuthService from '../services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import { CONFIG } from '../constants/Config';
@@ -11,14 +11,47 @@ export default function ProfileScreen() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   const [userData, setUserData] = useState({
     name: 'Loading...',
     email: 'loading@example.com',
     position: 'Please wait...',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
     nik: '',
-    username: ''
+    username: '',
+    phone: '',
+    company: ''
   });
+
+  const [isPersonalDataModalVisible, setIsPersonalDataModalVisible] = useState(false);
+  const [personalDataForm, setPersonalDataForm] = useState({
+    name: '',
+    email: '',
+    username: '',
+    phone: '',
+    nik: '',
+    position: ''
+  });
+  const [isUpdatingPersonalData, setIsUpdatingPersonalData] = useState(false);
+
+  const openPersonalDataModal = () => {
+    setPersonalDataForm({
+      name: userData.name !== 'Loading...' && userData.name !== 'ACCOUNT' ? userData.name : '',
+      email: userData.email !== 'loading@example.com' && userData.email !== 'Masuk untuk sinkronisasi data' ? userData.email : '',
+      username: userData.username || '',
+      phone: userData.phone || '',
+      nik: userData.nik || '',
+      position: userData.position !== 'Please wait...' && userData.position !== 'guest' ? userData.position : ''
+    });
+    setIsPersonalDataModalVisible(true);
+  };
 
   const getAvatarUrl = (avatarStr: string) => {
     if (!avatarStr) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80';
@@ -41,14 +74,14 @@ export default function ProfileScreen() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const selectedAsset = result.assets[0];
-        
+
         setIsUploading(true);
         const uriParts = selectedAsset.uri.split('/');
         const fileName = selectedAsset.fileName || uriParts[uriParts.length - 1] || 'avatar.jpg';
         const mimeType = selectedAsset.mimeType || 'image/jpeg';
-        
+
         const response = await AuthService.updateAvatar(selectedAsset.uri, mimeType, fileName);
-        
+
         if (response && response.avatar) {
           setUserData(prev => ({ ...prev, avatar: response.avatar }));
         }
@@ -74,7 +107,9 @@ export default function ProfileScreen() {
           position: 'guest',
           avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
           nik: '',
-          username: ''
+          username: '',
+          phone: '',
+          company: ''
         });
       }
     };
@@ -98,19 +133,54 @@ export default function ProfileScreen() {
     router.replace('/');
   };
 
-  const MenuListItem = ({ icon, title, description, isLast = false }: { icon: any, title: string, description: string, isLast?: boolean }) => (
+  const handleUpdatePassword = async () => {
+    if (!oldPassword || !newPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await AuthService.updatePassword(oldPassword, newPassword);
+      Alert.alert('Success', 'Password updated successfully');
+      setIsPasswordModalVisible(false);
+      setOldPassword('');
+      setNewPassword('');
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message || 'Failed to update password');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleUpdatePersonalData = async () => {
+    setIsUpdatingPersonalData(true);
+    try {
+      await AuthService.updateCurrentUser(personalDataForm);
+      Alert.alert('Success', 'Personal data updated successfully');
+      setUserData(prev => ({ ...prev, ...personalDataForm }));
+      setIsPersonalDataModalVisible(false);
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message || 'Failed to update personal data');
+    } finally {
+      setIsUpdatingPersonalData(false);
+    }
+  };
+
+  const MenuListItem = ({ icon, title, description, isLast = false, onPress }: { icon: any, title: string, description?: string, isLast?: boolean, onPress?: () => void }) => (
     <TouchableOpacity
       style={[styles.menuItem, isLast && styles.noBorder]}
       activeOpacity={0.7}
+      onPress={onPress}
     >
       <View style={styles.menuIconContainer}>
         {icon}
       </View>
       <View style={styles.menuTextContainer}>
         <Text style={styles.menuTitle}>{title}</Text>
-        <Text style={styles.menuDescription}>{description}</Text>
+        {description && <Text style={styles.menuDescription}>{description}</Text>}
       </View>
-      <ChevronRight size={20} color="#CCC" />
+      <ChevronRight size={18} color="#CCC" />
     </TouchableOpacity>
   );
 
@@ -129,9 +199,9 @@ export default function ProfileScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* USER INFO */}
           <View style={styles.userInfoSection}>
-            <TouchableOpacity 
-              onPress={handlePickAvatar} 
-              disabled={isUploading || !isLoggedIn} 
+            <TouchableOpacity
+              onPress={handlePickAvatar}
+              disabled={isUploading || !isLoggedIn}
               style={styles.avatarContainer}
               activeOpacity={0.8}
             >
@@ -141,7 +211,7 @@ export default function ProfileScreen() {
               />
               {isLoggedIn && (
                 <View style={styles.editAvatarBadge}>
-                  <Camera size={12} color="#FFF" />
+                  <Camera size={16} color="#FFF" />
                 </View>
               )}
               {isUploading && (
@@ -152,31 +222,31 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <View style={styles.userTextContainer}>
               <Text style={styles.userName}>{userData.name}</Text>
-              <Text style={styles.userPhone}>{userData.position || userData.email}</Text>
+              <Text style={styles.userPhone}>@{userData.username || userData.email.split('@')[0]}</Text>
             </View>
           </View>
 
+          <Text style={styles.sectionTitle}>PREFERENCES</Text>
           {/* MENU CARD */}
           <View style={styles.menuCard}>
             <MenuListItem
-              icon={<User size={22} color="#999" />}
+              icon={<User size={20} color="#000" />}
               title="Personal Data"
               description="Edit nama, email, alamat"
+              onPress={isLoggedIn ? openPersonalDataModal : undefined}
             />
+            {isLoggedIn && (
+              <MenuListItem
+                icon={<Lock size={20} color="#000" />}
+                title="Update Password"
+                description="Ubah kata sandi akun"
+                onPress={() => setIsPasswordModalVisible(true)}
+              />
+            )}
             <MenuListItem
-              icon={<CreditCard size={22} color="#999" />}
-              title="Bank Account"
-              description="Untuk reimbursement klaim"
-            />
-            <MenuListItem
-              icon={<Bell size={22} color="#999" />}
+              icon={<Bell size={20} color="#000" />}
               title="Notifications"
               description="Atur preferensi notifikasi"
-            />
-            <MenuListItem
-              icon={<History size={22} color="#999" />}
-              title="Payment History"
-              description="Riwayat pembayaran premi"
               isLast={true}
             />
           </View>
@@ -189,24 +259,202 @@ export default function ProfileScreen() {
               onPress={handleLogout}
             >
               <LogOut size={20} color="#E53935" />
-              <Text style={styles.logoutText}>Log Out</Text>
+              <Text style={styles.logoutText}>LOG OUT</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.logoutButton, { borderColor: '#0F9D58' }]}
+              style={[styles.logoutButton, { borderColor: '#000' }]}
               activeOpacity={0.8}
               onPress={handleLogin}
             >
-              <User size={20} color="#0F9D58" />
-              <Text style={[styles.logoutText, { color: '#0F9D58' }]}>Log In Sekarang</Text>
+              <User size={20} color="#000" />
+              <Text style={[styles.logoutText, { color: '#000' }]}>LOG IN</Text>
             </TouchableOpacity>
           )}
 
           {/* APP VERSION */}
           <View style={styles.footer}>
-            <Text style={styles.versionText}>App Version 2.4.0 (Build 20240219)</Text>
+            <Text style={styles.versionText}>Version 2.4.0 (2024)</Text>
           </View>
         </ScrollView>
+
+        {/* PASSWORD MODAL */}
+        <Modal
+          visible={isPasswordModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsPasswordModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Update Password</Text>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Old Password"
+                  secureTextEntry={!showOldPassword}
+                  value={oldPassword}
+                  onChangeText={setOldPassword}
+                  placeholderTextColor="#999"
+                />
+                <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowOldPassword(!showOldPassword)}>
+                  {showOldPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="New Password"
+                  secureTextEntry={!showNewPassword}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholderTextColor="#999"
+                />
+                <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowNewPassword(!showNewPassword)}>
+                  {showNewPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setIsPasswordModalVisible(false);
+                    setOldPassword('');
+                    setNewPassword('');
+                  }}
+                  disabled={isUpdatingPassword}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={handleUpdatePassword}
+                  disabled={isUpdatingPassword}
+                >
+                  {isUpdatingPassword ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Update</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* PERSONAL DATA MODAL */}
+        <Modal
+          visible={isPersonalDataModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsPersonalDataModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+              <Text style={styles.modalTitle}>Personal Data</Text>
+
+              <ScrollView style={{ width: '100%', marginBottom: 15 }} showsVerticalScrollIndicator={false}>
+                <Text style={styles.inputLabel}>Name</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Full Name"
+                    value={personalDataForm.name}
+                    onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, name: text }))}
+                    placeholderTextColor="#999"
+                  />
+                </View>
+
+                <Text style={styles.inputLabel}>Email</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Email Address"
+                    value={personalDataForm.email}
+                    onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, email: text }))}
+                    placeholderTextColor="#999"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <Text style={styles.inputLabel}>Username</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Username"
+                    value={personalDataForm.username}
+                    onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, username: text }))}
+                    placeholderTextColor="#999"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Phone Number"
+                    value={personalDataForm.phone}
+                    onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, phone: text }))}
+                    placeholderTextColor="#999"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+
+                <Text style={styles.inputLabel}>NIK</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="National ID (NIK)"
+                    value={personalDataForm.nik}
+                    onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, nik: text }))}
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <Text style={styles.inputLabel}>Position</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Job Position"
+                    value={personalDataForm.position}
+                    onChangeText={(text) => setPersonalDataForm(prev => ({ ...prev, position: text }))}
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </ScrollView>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setIsPersonalDataModalVisible(false)}
+                  disabled={isUpdatingPersonalData}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={handleUpdatePersonalData}
+                  disabled={isUpdatingPersonalData}
+                >
+                  {isUpdatingPersonalData ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
       </View>
     </SafeAreaView>
   );
@@ -220,7 +468,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#FAFBFC', // Very light grey background
+    backgroundColor: '#FFF',
   },
   header: {
     flexDirection: 'row',
@@ -241,47 +489,39 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   scrollContent: {
-    paddingHorizontal: 15,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 40,
     paddingBottom: 40,
   },
   userInfoSection: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 25,
-    // Add subtle shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    // Add elevation for Android
-    elevation: 2,
+    marginBottom: 40,
   },
   avatarContainer: {
     position: 'relative',
-    width: 60,
-    height: 60,
+    width: 120,
+    height: 120,
+    marginBottom: 15,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
     backgroundColor: '#F0F0F0',
   },
   editAvatarBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#0F9D58',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    bottom: -8,
+    right: -8,
+    backgroundColor: '#000',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#FFF',
   },
   uploadingOverlay: {
@@ -291,42 +531,45 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   userTextContainer: {
-    marginLeft: 15,
+    alignItems: 'center',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '700',
     color: '#000',
     marginBottom: 4,
   },
   userPhone: {
-    fontSize: 14,
-    color: '#999',
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#888',
+    fontWeight: '400',
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#666',
+    letterSpacing: 1.5,
+    marginBottom: 10,
+    marginLeft: 5,
   },
   menuCard: {
     backgroundColor: '#FFF',
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginBottom: 30,
-    // Shadow/Elevation
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    marginBottom: 40,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: '#E5E5E5',
   },
   noBorder: {
     borderBottomWidth: 0,
@@ -340,8 +583,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#000',
     marginBottom: 2,
   },
@@ -357,15 +600,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginBottom: 30,
+    borderRadius: 2,
+    paddingVertical: 16,
+    marginBottom: 20,
     gap: 10,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#E53935',
+    letterSpacing: 1,
   },
   footer: {
     alignItems: 'center',
@@ -373,6 +617,81 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 12,
     color: '#BBB',
-    fontWeight: '500',
+    fontWeight: '400',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    width: '85%',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    width: '100%',
+    height: 50,
+  },
+  modalInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+  },
+  eyeIcon: {
+    padding: 5,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F5F5F5',
+  },
+  saveButton: {
+    backgroundColor: '#0F9D58',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  saveButtonText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });

@@ -54,25 +54,25 @@ export const useAgenda = () => {
   }, [fetchAgendas]);
 
   const saveActivity = async (
-    title: string, 
-    notes: string, 
-    day: number, 
+    title: string,
+    notes: string,
+    day: number,
     timeSlot: string,
     location: string
   ) => {
     if (!title) return false;
-    
+
     setIsSaving(true);
     try {
       const today = new Date();
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() + (day - 1));
-      
+
       const dateStr = targetDate.toISOString().split('T')[0];
-      
+
       // Parse time range (e.g., "06:00 - 07:00")
       const [startTime, endTime] = timeSlot.split(' - ');
-      
+
       const payload = {
         title: title,
         note: notes || '',
@@ -83,9 +83,9 @@ export const useAgenda = () => {
       };
 
       const result: any = await agendaService.createAgenda(payload);
-      
+
       if (result && result.id) {
-        fetchAgendas(); 
+        fetchAgendas();
         return true;
       } else {
         Alert.alert('Gagal', result.message || 'Gagal menyimpan agenda');
@@ -106,8 +106,8 @@ export const useAgenda = () => {
       "Apakah Anda yakin ingin menghapus agenda ini?",
       [
         { text: "Batal", style: "cancel" },
-        { 
-          text: "Hapus", 
+        {
+          text: "Hapus",
           style: "destructive",
           onPress: async () => {
             try {
@@ -126,14 +126,14 @@ export const useAgenda = () => {
 
   const groupedActivities = () => {
     const grouped: Record<string, Activity[]> = {};
-    
+
     agendas.forEach(item => {
       const hourLabel = getHourLabel(item.startAt || item.createdAt);
       if (!grouped[hourLabel]) {
         grouped[hourLabel] = [];
       }
-      
-      const timeRange = (item.startAt && item.endAt) 
+
+      const timeRange = (item.startAt && item.endAt)
         ? `${formatLocalTime(item.startAt)} - ${formatLocalTime(item.endAt)}`
         : (item.time || 'Waktu tidak ditentukan');
 

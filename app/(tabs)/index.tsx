@@ -32,6 +32,25 @@ export default function OnboardingScreen() {
   const keyboardHeightAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    const checkExistingAuth = async () => {
+      try {
+        const isAuth = await AuthService.isAuthenticated();
+        if (isAuth) {
+          const currentUser = await AuthService.getCurrentUser();
+          if (currentUser) {
+            router.replace('/(tabs)/chats');
+          } else {
+            await AuthService.logout();
+          }
+        }
+      } catch (error) {
+        console.log('Auto-login check failed:', error);
+      }
+    };
+    checkExistingAuth();
+  }, []);
+
+  useEffect(() => {
     if (Platform.OS !== 'android') return;
 
     const keyboardDidShowListener = Keyboard.addListener(

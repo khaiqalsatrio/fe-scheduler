@@ -1,7 +1,7 @@
 import { StyleSheet, View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Linking } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Search, MoreHorizontal, MoreVertical, Calendar, Gift, Wand2, Upload } from 'lucide-react-native';
+import { Search, MoreHorizontal, MoreVertical, Calendar, Gift, Wand2, Upload, FileText, Edit3 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DocumentService, Document } from '../../services/documentService';
 import { CONFIG } from '../../constants/Config';
@@ -138,8 +138,8 @@ export default function MediaScreen() {
 
   const actions = [
     { id: '1', title: 'Rekap presentasi narasumber', icon: Calendar, onPress: handleGenerateRecap },
-    { id: '2', title: 'Buatkan laporan kegiatan', icon: Gift, onPress: handleGenerateReport },
-    { id: '3', title: 'Buatkan MoM diskusi', icon: Wand2, onPress: handleGenerateMom },
+    { id: '2', title: 'Buatkan laporan kegiatan', icon: FileText, onPress: handleGenerateReport },
+    { id: '3', title: 'Buatkan MoM diskusi', icon: Edit3, onPress: handleGenerateMom },
   ];
 
   const formatFileSize = (bytes: number) => {
@@ -178,81 +178,77 @@ export default function MediaScreen() {
           <Search color="#9CA3AF" size={18} />
         )}
         <Text style={styles.searchText}>
-          {actionLoading === 'ask-agent' ? 'Tera AI sedang berpikir...' : 'Ask Tera AI'}
+          {actionLoading === 'ask-agent' ? 'Tera AI sedang berpikir...' : 'Ask Tera AI about your files...'}
         </Text>
+      </TouchableOpacity>
+
+      {/* UPLOAD BUTTON */}
+      <TouchableOpacity onPress={handleUpload} style={styles.uploadBtnMain}>
+        <Upload color="#FFF" size={16} />
+        <Text style={styles.uploadTextMain}>UPLOAD</Text>
       </TouchableOpacity>
 
       <ScrollView>
         {/* Document List */}
         <View style={styles.docList}>
           <View style={styles.listHeader}>
-            <Text style={styles.sectionTitleList}>Dokumen Anda</Text>
-            <TouchableOpacity onPress={handleUpload} style={styles.uploadBtn}>
-              <Upload color="#E06B32" size={16} />
-              <Text style={styles.uploadText}>Upload</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitleList}>YOUR DOCUMENTS</Text>
+            <Text style={styles.listCountText}>Showing {documents.length} files</Text>
           </View>
 
           {loading ? (
-            <ActivityIndicator size="large" color="#E06B32" style={{ marginVertical: 20 }} />
+            <ActivityIndicator size="large" color="#000" style={{ marginVertical: 20 }} />
           ) : documents.length === 0 ? (
             <Text style={styles.emptyText}>Tidak ada dokumen.</Text>
-          ) : documents.map((doc) => (
-            <TouchableOpacity key={doc.id} style={styles.docItem} onPress={() => handleOpenDocument(doc)}>
-              <View style={styles.pdfIconContainer}>
-                <Text style={styles.pdfIconText}>{doc.file_type?.includes('pdf') ? 'PDF' : 'DOC'}</Text>
-              </View>
-              <View style={styles.docInfo}>
-                <Text style={styles.docTitle}>{doc.title}</Text>
-                <Text style={styles.docSubtitle} numberOfLines={1}>
-                  {formatFileSize(doc.file_size)}, Modified {doc.location ? `in ${doc.location} ` : ''}by {doc.modifiedBy?.name || 'Unknown'}
-                </Text>
-              </View>
-              <TouchableOpacity style={styles.docMoreBtn}>
-                <MoreVertical color="#000" size={18} />
+          ) : documents.map((doc) => {
+            return (
+              <TouchableOpacity key={doc.id} style={styles.docItem} onPress={() => handleOpenDocument(doc)}>
+                <View style={styles.pdfIconContainer}>
+                  <FileText size={20} color="#DE3B32" />
+                </View>
+                <View style={styles.docInfo}>
+                  <Text style={styles.docTitle}>{doc.title}</Text>
+                  <Text style={styles.docSubtitle} numberOfLines={1}>
+                    {formatFileSize(doc.file_size)} • Modified {doc.location ? `in ${doc.location} ` : ''}by {doc.modifiedBy?.name || 'Unknown'}
+                  </Text>
+                </View>
               </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
+            )
+          })}
         </View>
 
         {/* Action Section */}
-        <View style={styles.actionSection}>
-          <Text style={styles.sectionTitle}>Buat Dokumen</Text>
+        <View style={styles.actionSectionHeader}>
+          <Text style={styles.sectionTitleList}>DRAFT WITH TERA AI</Text>
+        </View>
+        <View style={styles.actionList}>
           {actions.map((action, index) => {
             const Icon = action.icon;
             return (
               <TouchableOpacity
                 key={action.id}
-                style={[styles.actionItem, index !== actions.length - 1 && styles.actionItemBorder]}
+                style={styles.actionCard}
                 onPress={action.onPress}
                 disabled={!!actionLoading}
               >
-                {actionLoading === action.id ? (
-                  <ActivityIndicator size="small" color="#E06B32" style={styles.actionIcon} />
-                ) : (
-                  <Icon color="#E06B32" size={18} style={styles.actionIcon} />
-                )}
-                <Text style={styles.actionText}>
-                  {actionLoading === action.id ? 'Memproses dengan Tera AI...' : action.title}
+                <View style={styles.actionIconContainer}>
+                  {actionLoading === action.id ? (
+                    <ActivityIndicator size="small" color="#000" />
+                  ) : (
+                    <Icon color="#000" size={20} />
+                  )}
+                </View>
+                <Text style={styles.actionTitleText}>
+                  {actionLoading === action.id ? 'Memproses...' : action.title}
+                </Text>
+                <Text style={styles.actionDescText}>
+                  {action.id === '1' ? 'AI will extract key points from your recording' : action.id === '2' ? 'Generate formal structured reports instantly' : 'Transcribe and summarize meeting notes'}
                 </Text>
               </TouchableOpacity>
             )
           })}
         </View>
       </ScrollView>
-
-      {/* Floating Robot Mascot FAB */}
-      <TouchableOpacity
-        style={styles.floatingMascot}
-        activeOpacity={0.8}
-        onPress={handleAskAgent}
-      >
-        <Image
-          source={require('../../assets/images/Adobe Express - file (11) 1.png')}
-          style={styles.mascotFabImage}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -295,21 +291,39 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 10,
     paddingHorizontal: 16,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 8,
     gap: 8,
   },
   searchText: {
     color: '#9CA3AF',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
+  },
+  uploadBtnMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000',
+    marginHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 20,
+  },
+  uploadTextMain: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   docList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     marginBottom: 10,
   },
   listHeader: {
@@ -319,23 +333,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitleList: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#111',
-  },
-  uploadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF0E6',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-  },
-  uploadText: {
-    color: '#E06B32',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
+    color: '#9CA3AF',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  listCountText: {
+    fontSize: 10,
+    color: '#9CA3AF',
   },
   emptyText: {
     textAlign: 'center',
@@ -346,75 +352,68 @@ const styles = StyleSheet.create({
   docItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
   },
   pdfIconContainer: {
-    width: 36,
-    height: 44,
-    backgroundColor: '#DE3B32',
+    width: 40,
+    height: 40,
+    backgroundColor: '#FADBD8',
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
-  pdfIconText: {
-    color: '#FFF',
-    fontSize: 10,
-    fontWeight: 'bold',
+  aiIconContainer: {
+    backgroundColor: '#000',
   },
   docInfo: {
     flex: 1,
     paddingRight: 10,
   },
   docTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#111',
     marginBottom: 4,
   },
   docSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#888',
   },
-  docMoreBtn: {
-    padding: 4,
-  },
-  actionSection: {
+  actionSectionHeader: {
+    paddingHorizontal: 20,
     marginTop: 10,
-    paddingHorizontal: 16,
+    marginBottom: 10,
   },
-  sectionTitle: {
-    fontSize: 13,
+  actionList: {
+    paddingBottom: 40,
+  },
+  actionCard: {
+    backgroundColor: '#F9F9F9',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    alignItems: 'flex-start',
+  },
+  actionIconContainer: {
+    marginBottom: 10,
+  },
+  actionTitleText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: '#000',
     marginBottom: 4,
   },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
+  actionDescText: {
+    fontSize: 11,
+    color: '#888',
   },
-  actionItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  actionIcon: {
-    marginRight: 12,
-  },
-  actionText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  floatingMascot: {
-    position: 'absolute',
-    bottom: 24,
-    right: 16,
-    width: 80,
-    height: 80,
-    zIndex: 10,
-  },
-  mascotFabImage: {
-    width: '100%',
-    height: '100%',
-  }
 });

@@ -245,18 +245,7 @@ export default function AgendaScreen() {
         onSend={handleSendToAI}
       />
 
-      {/* Floating Robot Mascot FAB */}
-      <TouchableOpacity
-        style={styles.floatingMascot}
-        onPress={() => setIsAIModalVisible(true)}
-        activeOpacity={0.8}
-      >
-        <Image
-          source={require('../../assets/images/Adobe Express - file (11) 1.png')}
-          style={styles.mascotFabImage}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
+
     </SafeAreaView>
   );
 }

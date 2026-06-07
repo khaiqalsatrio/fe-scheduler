@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, FileText, Wand2 } from 'lucide-react-native';
+import { ArrowLeft, Share2, FileText, Wand2, Sparkles, Copy } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { DocumentService } from '../../services/documentService';
 
 export default function DocumentDetailScreen() {
@@ -22,18 +23,44 @@ export default function DocumentDetailScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
+  const handleCopySummary = async () => {
+    if (analysisResult) {
+      await Clipboard.setStringAsync(analysisResult);
+      Alert.alert('Sukses', 'Summary berhasil disalin ke clipboard');
+    }
+  };
+
+  const renderFormattedText = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <Text key={index} style={{ fontWeight: 'bold', color: '#111' }}>
+            {part.slice(2, -2)}
+          </Text>
+        );
+      }
+      return <Text key={index}>{part}</Text>;
+    });
+  };
+
   const handleShare = useCallback(async () => {
     if (!url) return;
     try {
+      let shareMessage = `File: ${title}\nLink: ${url}`;
+      if (analysisResult) {
+        shareMessage += `\n\nSummary:\n${analysisResult}`;
+      }
+
       await Share.share({
         title: title || 'Document',
-        message: url,
+        message: shareMessage,
         url: url,
       });
     } catch {
       Alert.alert('Gagal', 'Tidak dapat berbagi dokumen ini.');
     }
-  }, [url, title]);
+  }, [url, title, analysisResult]);
 
   const handleAnalyze = async () => {
     if (!id) {
@@ -44,7 +71,7 @@ export default function DocumentDetailScreen() {
       setIsAnalyzing(true);
       const res = await DocumentService.generateRecap(
         [id],
-        'Tolong analisa file ini dan ambil poin-poin pentingnya'
+        'Tolong buatkan summary dari file ini'
       );
       setAnalysisResult(res.result);
     } catch (error: any) {
@@ -59,18 +86,21 @@ export default function DocumentDetailScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header
-        title="Detail Dokumen"
+        title="Document Detail"
         onBack={() => router.back()}
         onShare={handleShare}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.detailCard}>
-          <View style={styles.iconContainer}>
-            <FileText color="#E06B32" size={48} />
+          <View style={styles.documentPaperCard}>
+            <FileText color="#111" size={56} />
+            <View style={styles.pdfBadge}>
+              <Text style={styles.pdfBadgeText}>PDF</Text>
+            </View>
           </View>
-          <Text style={styles.docTitle}>{title || 'Dokumen Tanpa Judul'}</Text>
-          <Text style={styles.docSubtitle}>File siap untuk dianalisa</Text>
+          <Text style={styles.docTitle}>{title || 'Untitled Document'}</Text>
+          <Text style={styles.docSubtitle}>File is ready to be summarized</Text>
         </View>
 
         <TouchableOpacity
@@ -81,17 +111,28 @@ export default function DocumentDetailScreen() {
           {isAnalyzing ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
-            <Wand2 color="#FFF" size={20} />
+            <Sparkles color="#FFF" size={20} />
           )}
           <Text style={styles.analyzeButtonText}>
-            {isAnalyzing ? 'Sedang Menganalisa...' : 'Analisa Isi File'}
+            {isAnalyzing ? 'Generating Summary...' : 'Generate Summary'}
           </Text>
         </TouchableOpacity>
 
         {analysisResult && (
           <View style={styles.resultContainer}>
-            <Text style={styles.resultTitle}>Hasil Analisa:</Text>
-            <Text style={styles.resultText}>{analysisResult}</Text>
+            <View style={[styles.resultHeader, { justifyContent: 'space-between' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Sparkles color="#000" size={18} />
+                <Text style={styles.resultTitleText}>Hasil Summary Tera AI</Text>
+                <View style={styles.betaBadge}>
+                  <Text style={styles.betaText}>BETA</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={handleCopySummary} accessibilityLabel="Copy Summary" style={{ padding: 4 }}>
+                <Copy color="#6B7280" size={18} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.resultText}>{renderFormattedText(analysisResult)}</Text>
           </View>
         )}
       </ScrollView>
@@ -164,14 +205,34 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     marginTop: 20,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: '#FFF0E6',
+  documentPaperCard: {
+    width: 160,
+    height: 210,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  pdfBadge: {
+    marginTop: 12,
+    backgroundColor: '#111',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  pdfBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   docTitle: {
     fontSize: 20,
@@ -188,37 +249,61 @@ const styles = StyleSheet.create({
   analyzeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E06B32',
+    backgroundColor: '#000',
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 8,
     gap: 10,
     width: '100%',
     justifyContent: 'center',
   },
   analyzeButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   resultContainer: {
     marginTop: 32,
     width: '100%',
-    backgroundColor: '#F9FAFB',
-    padding: 16,
+    backgroundColor: '#FFF',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    overflow: 'hidden',
   },
-  resultTitle: {
-    fontSize: 16,
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  resultTitleText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#111',
-    marginBottom: 12,
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  betaBadge: {
+    backgroundColor: '#FFF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  betaText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#6B7280',
   },
   resultText: {
+    padding: 16,
     fontSize: 14,
     color: '#374151',
-    lineHeight: 22,
+    lineHeight: 24,
   },
 });

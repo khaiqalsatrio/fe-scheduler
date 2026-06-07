@@ -115,6 +115,17 @@ export const AuthService = {
   async isAuthenticated(): Promise<boolean> {
     const token = await SecureStore.getItemAsync(CONFIG.AUTH_TOKEN_KEY);
     return !!token;
+  },
+
+  /**
+   * Update current user password
+   */
+  async updatePassword(oldPassword: string, newPassword: string) {
+    const response = await apiClient.patch('/users/me/password', {
+      oldPassword,
+      newPassword,
+    });
+    return response.data;
   }
 };
 
