@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../../context/ThemeContext';
 import { ProfileStep } from './ProfileStep';
 import { ReferenceStep } from './ReferenceStep';
 import { InterestStep } from './InterestStep';
@@ -18,6 +19,7 @@ interface OnboardingOverlayProps {
 }
 
 export const OnboardingOverlay = ({ step, isRegistering, onboardingState, onCancel, onComplete }: OnboardingOverlayProps) => {
+  const { isDarkMode } = useTheme();
   if (step < 2 || step > 6) return null;
 
   return (
@@ -31,7 +33,7 @@ export const OnboardingOverlay = ({ step, isRegistering, onboardingState, onCanc
           <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
         </>
       )}
-      <View style={[styles.onboardingModal, step === 4 && { maxHeight: '85%' }]}>
+      <View style={[styles.onboardingModal, isDarkMode && darkStyles.onboardingModal, step === 4 && { maxHeight: '85%' }]}>
         {step === 2 && (
           <ProfileStep 
             fullName={onboardingState.fullName}
@@ -100,5 +102,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0, // Removed shadow for clean look on blur
     shadowRadius: 0,
     elevation: 0, // Removed elevation for clean look on blur
+  },
+});
+
+const darkStyles = StyleSheet.create({
+  onboardingModal: {
+    backgroundColor: '#1E1E1E',
   },
 });

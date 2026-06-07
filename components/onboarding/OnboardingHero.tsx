@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, Image, Animated } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const SLIDE_DATA = [
   {
@@ -23,6 +24,7 @@ const SLIDE_DATA = [
 ];
 
 export const OnboardingHero = () => {
+  const { isDarkMode } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -53,8 +55,8 @@ export const OnboardingHero = () => {
         </View>
       </View>
       <View style={styles.textSection}>
-        <Text style={styles.heroTitle}>{SLIDE_DATA[currentIndex].title}</Text>
-        <Text style={styles.heroDesc}>{SLIDE_DATA[currentIndex].desc}</Text>
+        <Text style={[styles.heroTitle, isDarkMode && { color: '#FFF' }]}>{SLIDE_DATA[currentIndex].title}</Text>
+        <Text style={[styles.heroDesc, isDarkMode && { color: '#AAA' }]}>{SLIDE_DATA[currentIndex].desc}</Text>
       </View>
     </Animated.View>
   );

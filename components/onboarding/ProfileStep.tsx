@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, TextInput, Image, ActivityIndicator } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ProfileStepProps {
   fullName: string;
@@ -12,13 +13,14 @@ interface ProfileStepProps {
 }
 
 export const ProfileStep = ({ fullName, setFullName, role, setRole, isLoading, onCancel, onContinue }: ProfileStepProps) => {
+  const { isDarkMode } = useTheme();
   return (
     <View style={styles.container}>
-      <Text style={styles.onboardingTitle}>Isi Profil</Text>
-      <Text style={styles.onboardingStepText}>Step 1 dari 3</Text>
+      <Text style={[styles.onboardingTitle, isDarkMode && darkStyles.onboardingTitle]}>Isi Profil</Text>
+      <Text style={[styles.onboardingStepText, isDarkMode && darkStyles.onboardingStepText]}>Step 1 dari 3</Text>
 
       <View style={styles.avatarContainer}>
-        <TouchableOpacity style={styles.avatarRedCircle} activeOpacity={0.7}>
+        <TouchableOpacity style={[styles.avatarRedCircle, isDarkMode && darkStyles.avatarRedCircle]} activeOpacity={0.7}>
           <Image
             source={require('../../assets/images/logo.png')}
             style={styles.avatarLogoInCircle}
@@ -28,30 +30,30 @@ export const ProfileStep = ({ fullName, setFullName, role, setRole, isLoading, o
       </View>
 
       <View style={styles.inputFieldContainer}>
-        <Text style={styles.inputLabel}>Nama Lengkap *</Text>
+        <Text style={[styles.inputLabel, isDarkMode && darkStyles.inputLabel]}>Nama Lengkap *</Text>
         <TextInput
-          style={styles.fieldInput}
+          style={[styles.fieldInput, isDarkMode && darkStyles.fieldInput]}
           placeholder="Nama lengkap"
-          placeholderTextColor="#999"
+          placeholderTextColor={isDarkMode ? "#777" : "#999"}
           value={fullName}
           onChangeText={setFullName}
         />
       </View>
 
       <View style={styles.inputFieldContainer}>
-        <Text style={styles.inputLabel}>Role / Pekerjaan *</Text>
+        <Text style={[styles.inputLabel, isDarkMode && darkStyles.inputLabel]}>Role / Pekerjaan *</Text>
         <TextInput
-          style={styles.fieldInput}
+          style={[styles.fieldInput, isDarkMode && darkStyles.fieldInput]}
           placeholder="product manejer, engineer, designer, dll"
-          placeholderTextColor="#999"
+          placeholderTextColor={isDarkMode ? "#777" : "#999"}
           value={role}
           onChangeText={setRole}
         />
       </View>
 
       <View style={styles.onboardingActionRow}>
-        <TouchableOpacity style={styles.secondaryActionBtn} onPress={onCancel}>
-          <Text style={styles.secondaryActionText}>Batal</Text>
+        <TouchableOpacity style={[styles.secondaryActionBtn, isDarkMode && darkStyles.secondaryActionBtn]} onPress={onCancel}>
+          <Text style={[styles.secondaryActionText, isDarkMode && darkStyles.secondaryActionText]}>Batal</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.primaryActionBtn, isLoading && styles.buttonLoading]}
@@ -86,4 +88,14 @@ const styles = StyleSheet.create({
   primaryActionBtn: { flex: 1.2, height: 52, borderRadius: 15, backgroundColor: '#27AE60', justifyContent: 'center', alignItems: 'center' },
   primaryActionText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
   buttonLoading: { opacity: 0.8 },
+});
+
+const darkStyles = StyleSheet.create({
+  onboardingTitle: { color: '#FFF' },
+  onboardingStepText: { color: '#AAA' },
+  avatarRedCircle: { backgroundColor: '#2C2C2C', borderColor: '#333' },
+  inputLabel: { color: '#EEE' },
+  fieldInput: { backgroundColor: '#2C2C2C', color: '#FFF' },
+  secondaryActionBtn: { backgroundColor: '#2C2C2C' },
+  secondaryActionText: { color: '#AAA' },
 });

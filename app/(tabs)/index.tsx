@@ -12,10 +12,12 @@ import { OnboardingOverlay } from '../../components/onboarding/OnboardingOverlay
 
 // Custom Hooks
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
 
   // Auth States
   const [email, setEmail] = useState('');
@@ -166,37 +168,37 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.safeArea, isDarkMode && darkStyles.safeArea]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <View style={styles.header}>
           <Image source={require('../../assets/images/logo.png')} style={styles.logoImageLarge} />
-          <TouchableOpacity style={styles.headerExploreBtn} activeOpacity={0.7} onPress={() => router.replace('/(tabs)/chats')}>
-            <Text style={styles.headerExploreText}>Jelajahi Fitur</Text>
+          <TouchableOpacity style={[styles.headerExploreBtn, isDarkMode && darkStyles.headerExploreBtn]} activeOpacity={0.7} onPress={() => router.replace('/(tabs)/chats')}>
+            <Text style={[styles.headerExploreText, isDarkMode && darkStyles.headerExploreText]}>Jelajahi Fitur</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView 
-          style={styles.scrollView}
+          style={[styles.scrollView, isDarkMode && darkStyles.scrollView]}
           contentContainerStyle={styles.scrollContent} 
           showsVerticalScrollIndicator={false} 
           keyboardShouldPersistTaps="handled"
         >
           <OnboardingHero />
 
-          <View style={[styles.loginCard, { paddingBottom: Math.max(30, insets.bottom + 20) }]}>
+          <View style={[styles.loginCard, isDarkMode && darkStyles.loginCard, { paddingBottom: Math.max(30, insets.bottom + 20) }]}>
             {onboardingState.step < 2 ? (
               <>
                 {step === 0 && (
                   <View>
                     <View style={styles.inputWrapper}>
                       <TextInput
-                        style={styles.input}
+                        style={[styles.input, isDarkMode && darkStyles.input]}
                         placeholder="Email"
-                        placeholderTextColor="#999"
+                        placeholderTextColor={isDarkMode ? "#777" : "#999"}
                         value={email}
                         onChangeText={handleEmailChange}
                         keyboardType="email-address"
@@ -222,19 +224,19 @@ export default function OnboardingScreen() {
 
                 {step === 1 && (
                   <View>
-                    <View style={styles.completedEmailBar}>
+                    <View style={[styles.completedEmailBar, isDarkMode && darkStyles.completedEmailBar]}>
                       <TouchableOpacity onPress={() => setStep(0)} style={styles.backBtn}>
-                        <MaterialCommunityIcons name="chevron-left" size={28} color="#333" />
+                        <MaterialCommunityIcons name="chevron-left" size={28} color={isDarkMode ? "#FFF" : "#333"} />
                       </TouchableOpacity>
                       <View style={styles.emailTextContainer}>
-                        <Text style={styles.completedEmailLabel}>Email</Text>
-                        <Text style={styles.completedEmailValue}>{email}</Text>
+                        <Text style={[styles.completedEmailLabel, isDarkMode && darkStyles.completedEmailLabel]}>Email</Text>
+                        <Text style={[styles.completedEmailValue, isDarkMode && darkStyles.completedEmailValue]}>{email}</Text>
                       </View>
                     </View>
 
                     <View style={styles.inputWrapper}>
-                      <View style={styles.passwordInputContainer}>
-                        <TextInput style={styles.passwordInput} placeholder="Password" placeholderTextColor="#999" value={password} onChangeText={setPassword} secureTextEntry={secureText} />
+                      <View style={[styles.passwordInputContainer, isDarkMode && darkStyles.passwordInputContainer]}>
+                        <TextInput style={[styles.passwordInput, isDarkMode && darkStyles.passwordInput]} placeholder="Password" placeholderTextColor={isDarkMode ? "#777" : "#999"} value={password} onChangeText={setPassword} secureTextEntry={secureText} />
                         <TouchableOpacity onPress={() => setSecureText(!secureText)} style={styles.eyeIcon}>
                           <MaterialCommunityIcons name={secureText ? "eye-off" : "eye"} size={22} color="#999" />
                         </TouchableOpacity>
@@ -255,12 +257,12 @@ export default function OnboardingScreen() {
                 )}
 
                 <View style={styles.dividerContainer}>
-                  <View style={styles.dividerLine} /><Text style={styles.dividerText}>or</Text><View style={styles.dividerLine} />
+                  <View style={[styles.dividerLine, isDarkMode && darkStyles.dividerLine]} /><Text style={[styles.dividerText, isDarkMode && darkStyles.dividerText]}>or</Text><View style={[styles.dividerLine, isDarkMode && darkStyles.dividerLine]} />
                 </View>
 
-                <TouchableOpacity style={styles.googleButton} activeOpacity={0.7} onPress={() => Alert.alert('Info', 'Login Google belum tersedia.')}>
+                <TouchableOpacity style={[styles.googleButton, isDarkMode && darkStyles.googleButton]} activeOpacity={0.7} onPress={() => Alert.alert('Info', 'Login Google belum tersedia.')}>
                   <Image source={{ uri: 'https://img.icons8.com/color/48/000000/google-logo.png' }} style={styles.googleIcon} />
-                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                  <Text style={[styles.googleButtonText, isDarkMode && darkStyles.googleButtonText]}>Sign in with Google</Text>
                 </TouchableOpacity>
               </>
             ) : null}
@@ -268,7 +270,7 @@ export default function OnboardingScreen() {
 
           {onboardingState.step < 2 && isRegistering && (
             <View style={styles.registrationNoticeContainer}>
-              <Text style={styles.registrationNoticeText}>
+              <Text style={[styles.registrationNoticeText, isDarkMode && darkStyles.registrationNoticeText]}>
                 Email belum terdaftar. Buat akun baru dengan password Anda.
               </Text>
             </View>
@@ -341,4 +343,23 @@ const styles = StyleSheet.create({
   googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: '#EAEAEA', backgroundColor: '#FFF' },
   googleIcon: { width: 22, height: 22, marginRight: 12 },
   googleButtonText: { fontSize: 16, fontWeight: '700', color: '#333' },
+});
+
+const darkStyles = StyleSheet.create({
+  safeArea: { backgroundColor: '#111' },
+  headerExploreBtn: { backgroundColor: '#222', borderColor: '#333' },
+  headerExploreText: { color: '#EEE' },
+  scrollView: { backgroundColor: '#111' },
+  loginCard: { backgroundColor: '#1E1E1E', shadowColor: '#000' },
+  input: { backgroundColor: '#2C2C2C', color: '#FFF' },
+  completedEmailBar: { backgroundColor: '#2C2C2C' },
+  completedEmailLabel: { color: '#AAA' },
+  completedEmailValue: { color: '#FFF' },
+  passwordInputContainer: { backgroundColor: '#2C2C2C' },
+  passwordInput: { color: '#FFF' },
+  dividerLine: { backgroundColor: '#333' },
+  dividerText: { color: '#777' },
+  googleButton: { backgroundColor: '#1E1E1E', borderColor: '#333' },
+  googleButtonText: { color: '#FFF' },
+  registrationNoticeText: { color: '#AAA' },
 });
