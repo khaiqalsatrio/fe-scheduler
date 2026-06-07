@@ -43,7 +43,8 @@ export default function ChatsScreen() {
     handleMuteSelected,
     handleUnmuteSelected,
     handleDeleteSelected,
-    toggleSelection
+    toggleSelection,
+    handleSwipeArchive
   } = useChatsList();
 
   useFocusEffect(
@@ -75,6 +76,8 @@ export default function ChatsScreen() {
           isSelected={selectedChatIds.includes(item.id)}
           isMuted={item.isMuted}
           isPinned={item.isPinned}
+          isArchivedChat={item.isArchived}
+          onSwipeArchive={() => handleSwipeArchive(item.id, !!item.isArchived)}
         />
       );
     }
@@ -149,7 +152,7 @@ export default function ChatsScreen() {
           onRefresh={fetchChatsFromBE}
           keyExtractor={(item) => item.id}
           extraData={chats}
-          ListHeaderComponent={archivedCount > 0 ? (
+          ListHeaderComponent={(
             <TouchableOpacity
               style={[styles.archivedHeader, isDarkMode && styles.searchResultItemDark]}
               onPress={() => router.push('/archived' as any)}
@@ -163,7 +166,7 @@ export default function ChatsScreen() {
                 </Text>
               )}
             </TouchableOpacity>
-          ) : null}
+          )}
           renderItem={({ item }) => (
             <ChatItem
               name={item.name}
@@ -177,6 +180,8 @@ export default function ChatsScreen() {
               onLongPress={() => handleLongPress(item.id)}
               isSelected={selectedChatIds.includes(item.id)}
               isMuted={item.isMuted}
+              isArchivedChat={item.isArchived}
+              onSwipeArchive={() => handleSwipeArchive(item.id, !!item.isArchived)}
             />
           )}
           contentContainerStyle={styles.listContent}

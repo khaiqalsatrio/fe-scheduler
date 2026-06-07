@@ -109,9 +109,9 @@ export function useChatActions({
 
   const onTeraAIAction = async (actionType: 'summarize' | 'presentation' | 'ask', customText?: string) => {
     setIsAIActionsVisible(false);
-    let userPrompt = actionType === 'summarize' ? "/summarize " + (customText || "Tolong ringkas poin-poin diskusi.") 
-                  : actionType === 'presentation' ? "/presentation " + (customText || "Buat slide.")
-                  : customText || "Tanya AI...";
+    let userPrompt = actionType === 'summarize' ? "/summarize " + (customText || "Tolong ringkas poin-poin diskusi.")
+      : actionType === 'presentation' ? "/presentation " + (customText || "Buat slide.")
+        : customText || "Tanya AI...";
 
     handleSend(userPrompt);
     setIsAiThinking(true);
@@ -146,24 +146,24 @@ export function useChatActions({
       { text: 'Batal', style: 'cancel' },
     ];
     if (selectedMessage.isMine) {
-      options.unshift({ 
-        text: 'Hapus untuk Semua Orang', 
-        style: 'destructive', 
-        onPress: () => { handleDeleteForEveryone(selectedMessage.id); setIsMenuVisible(false); } 
+      options.unshift({
+        text: 'Hapus untuk Semua Orang',
+        style: 'destructive',
+        onPress: () => { handleDeleteForEveryone(selectedMessage.id); setIsMenuVisible(false); }
       });
     }
     Alert.alert('Hapus Pesan?', 'Pesan yang dihapus tidak dapat dikembalikan.', options);
   };
-  
+
   const handleResetChat = () => {
     Alert.alert(
       'Reset Percakapan?',
       'Seluruh riwayat pesan akan dihapus secara permanen bagi semua orang. Tindakan ini tidak dapat dibatalkan.',
       [
         { text: 'Batal', style: 'cancel' },
-        { 
-          text: 'Reset Sekarang', 
-          style: 'destructive', 
+        {
+          text: 'Reset Sekarang',
+          style: 'destructive',
           onPress: async () => {
             try {
               const newConv = await ChatService.deleteConversation(id);
@@ -175,7 +175,7 @@ export function useChatActions({
               console.error("Reset Error:", error);
               Alert.alert('Gagal Reset', 'Gagal mereset percakapan. Silakan coba lagi.');
             }
-          } 
+          }
         }
       ]
     );

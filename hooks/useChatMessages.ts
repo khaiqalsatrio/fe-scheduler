@@ -45,25 +45,25 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
   }, []);
 
   const formatMessageTime = useCallback((dateStr?: string) => {
-    return dateStr 
-      ? new Date(dateStr).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) 
+    return dateStr
+      ? new Date(dateStr).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })
       : new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
   }, []);
 
   // --- Computed Data ---
   const chatItems = useMemo(() => {
     const items: ChatItem[] = [];
-    
+
     messages.forEach((msg, index) => {
       // Add the message itself first (it will be below when inverted)
       items.push(msg);
 
       const dateLabel = getChatDateLabel(msg.created_at);
-      
+
       // Peek at the NEXT message (which is chronologicaly OLDER in the array)
       const nextMsg = messages[index + 1];
       const nextDateLabel = nextMsg ? getChatDateLabel(nextMsg.created_at) : '';
-      
+
       // If the next message has a different date, or if it's the very last message in the history
       if (dateLabel !== nextDateLabel) {
         items.push({
@@ -105,7 +105,7 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
           throw e;
         }
       }
-      
+
       const rawMessages = data.messages || [];
       const conversationInfo = data.conversation;
 
@@ -215,13 +215,13 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
 
       setMessages(prev => {
         // Cek apakah pesan dengan ID yang sama (dari socket atau client_message_id) sudah ada
-        const isDuplicate = prev.some(p => 
-          p.id === newMessage.id || 
+        const isDuplicate = prev.some(p =>
+          p.id === newMessage.id ||
           (msg.client_message_id && p.id === msg.client_message_id)
         );
-        
+
         if (isDuplicate) return prev;
-        
+
         // Inverted: Pesan terbaru di INDEKS AWAL
         return [newMessage, ...prev];
       });
@@ -262,7 +262,7 @@ export const useChatMessages = (conversationId: string, socket: Socket | null, m
     });
 
     socket.on('message.updated', (msg: any) => {
-      setMessages(prev => prev.map(m => (m.id === msg.id || m.id === msg.client_message_id) 
+      setMessages(prev => prev.map(m => (m.id === msg.id || m.id === msg.client_message_id)
         ? { ...m, text: msg.content, content: msg.content, isEdited: !!msg.edited_at } : m));
     });
 

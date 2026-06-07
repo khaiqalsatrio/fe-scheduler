@@ -1,14 +1,16 @@
 import { StyleSheet, View, FlatList, TouchableOpacity, Text, SafeAreaView, Platform, StatusBar, ActivityIndicator, Alert } from 'react-native';
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Archive, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Archive, Trash2, Inbox } from 'lucide-react-native';
 import { ChatItem } from '../components/ChatItem';
 import { ChatListItem } from '../types/chat';
 import { ChatService } from '../services/chatService';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ArchivedChatsScreen() {
   const router = useRouter();
+  const { isDarkMode } = useTheme();
   const [chats, setChats] = useState<ChatListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
@@ -70,14 +72,14 @@ export default function ArchivedChatsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={[styles.headerSafeArea, selectedChatIds.length > 0 && styles.headerSelected]}>
+    <View style={[styles.container, isDarkMode && styles.containerDark]}>
+      <SafeAreaView style={[styles.headerSafeArea, isDarkMode && styles.headerSafeAreaDark, selectedChatIds.length > 0 && styles.headerSelected]}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={() => selectedChatIds.length > 0 ? setSelectedChatIds([]) : router.back()} style={styles.backButton}>
-              <ArrowLeft color={selectedChatIds.length > 0 ? "#FFF" : "#000"} size={24} />
+              <ArrowLeft color={selectedChatIds.length > 0 ? "#FFF" : (isDarkMode ? "#FFF" : "#000")} size={24} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, selectedChatIds.length > 0 && styles.headerTitleSelected]}>
+            <Text style={[styles.headerTitle, isDarkMode && styles.textDark, selectedChatIds.length > 0 && styles.headerTitleSelected]}>
               {selectedChatIds.length > 0 ? selectedChatIds.length : "Arsip"}
             </Text>
           </View>
@@ -127,14 +129,18 @@ export default function ArchivedChatsScreen() {
             isSelected={selectedChatIds.includes(item.id)}
             onPress={() => handleChatPress(item.id, item.name)}
             onLongPress={() => toggleSelection(item.id)}
+            isArchivedChat={true}
+            onSwipeArchive={() => handleToggleArchive([item.id], false)}
           />
         )}
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
             {!isLoading && (
               <>
-                <Text style={styles.emptyText}>Tidak ada percakapan yang diarsipkan</Text>
-                <Text style={styles.emptySubText}>Chat yang diarsipkan akan muncul di sini</Text>
+                <View style={[styles.emptyIconContainer, isDarkMode && styles.emptyIconContainerDark]}>
+                  <Inbox color={isDarkMode ? "#555" : "#D1D5DB"} size={36} />
+                </View>
+                <Text style={[styles.emptySubText, isDarkMode && styles.emptySubTextDark]}>Tidak ada pesan arsip lainnya</Text>
               </>
             )}
             {isLoading && <ActivityIndicator color="#00A884" />}
@@ -151,6 +157,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
   },
+  containerDark: {
+    backgroundColor: '#121212',
+  },
   headerSafeArea: {
     backgroundColor: '#FFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
@@ -159,6 +168,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 1,
+  },
+  headerSafeAreaDark: {
+    backgroundColor: '#1F2937',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
   },
   headerSelected: {
     backgroundColor: '#005C4B', // WhatsApp Dark Green for selection
@@ -183,6 +197,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
   },
+  textDark: {
+    color: '#FFF',
+  },
   headerTitleSelected: {
     color: '#FFF',
   },
@@ -200,17 +217,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '600',
-    marginTop: 20,
+  emptyIconContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyIconContainerDark: {
+    backgroundColor: '#1F2937',
   },
   emptySubText: {
     fontSize: 14,
-    color: '#999',
-    marginTop: 8,
+    color: '#D1D5DB',
+    fontWeight: '500',
+  },
+  emptySubTextDark: {
+    color: '#6B7280',
   },
 });

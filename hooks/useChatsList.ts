@@ -136,6 +136,18 @@ export const useChatsList = () => {
     }
   }, [chats, selectedChatIds, fetchChatsFromBE]);
 
+  const handleSwipeArchive = useCallback(async (id: string, isArchived: boolean) => {
+    setIsLoading(true);
+    try {
+      await ChatService.archiveConversations([id], !isArchived);
+      fetchChatsFromBE();
+    } catch (error) {
+      Alert.alert('Error', 'Gagal memproses arsip.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchChatsFromBE]);
+
   const handleMuteSelected = useCallback(async (duration?: string) => {
     setIsLoading(true);
     try {
@@ -227,6 +239,7 @@ export const useChatsList = () => {
     handleMuteSelected,
     handleUnmuteSelected,
     handleDeleteSelected,
-    toggleSelection
+    toggleSelection,
+    handleSwipeArchive
   };
 };

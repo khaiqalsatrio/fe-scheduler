@@ -25,18 +25,18 @@ export function ChatMenuModal({
         <View style={styles.modalOverlay}>
           <Animated.View style={[
             styles.modalContent,
-            { 
+            {
               opacity: menuModalAnim,
-              transform: [{ scale: menuModalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] 
+              transform: [{ scale: menuModalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }]
             }
           ]}>
             <TouchableWithoutFeedback>
               <View>
                 <Text style={styles.modalTitle}>Opsi Percakapan</Text>
                 <Text style={styles.modalMessage}>Pilih tindakan untuk percakapan ini.</Text>
-                
+
                 <View style={[styles.modalActionContainer, { marginTop: 8 }]}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => {
                       setIsMenuModalVisible(false);
                       setTimeout(onDeleteChatPress, 300);
@@ -45,8 +45,8 @@ export function ChatMenuModal({
                   >
                     <Text style={[styles.modalCancelText, { color: '#00A884', fontSize: 13 }]}>HAPUS CHAT</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     onPress={() => setIsMenuModalVisible(false)}
                     style={{ paddingHorizontal: 16, paddingVertical: 10 }}
                   >

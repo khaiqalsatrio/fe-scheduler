@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useNotifications } from '@/hooks/useNotifications';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -35,8 +36,10 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <RootLayoutInner />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <RootLayoutInner />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

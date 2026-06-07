@@ -1,6 +1,7 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
-import { User, Users, Check, VolumeX, Pin } from 'lucide-react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, Animated } from 'react-native';
+import { User, Users, Check, VolumeX, Pin, Archive, ArchiveRestore } from 'lucide-react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { CONFIG } from '../constants/Config';
 import { useTheme } from '../context/ThemeContext';
 
@@ -17,6 +18,8 @@ interface ChatItemProps {
   isSelected?: boolean;
   isMuted?: boolean;
   isPinned?: boolean;
+  onSwipeArchive?: () => void;
+  isArchivedChat?: boolean;
 }
 
 export const ChatItem: React.FC<ChatItemProps> = ({
@@ -32,8 +35,11 @@ export const ChatItem: React.FC<ChatItemProps> = ({
   isSelected,
   isMuted,
   isPinned,
+  onSwipeArchive,
+  isArchivedChat,
 }) => {
   const { isDarkMode } = useTheme();
+  const swipeableRef = useRef<Swipeable>(null);
 
   const getAvatarUrl = (avatarStr?: string) => {
     if (!avatarStr) return null;
@@ -45,7 +51,36 @@ export const ChatItem: React.FC<ChatItemProps> = ({
 
   const formattedAvatar = getAvatarUrl(avatar);
 
-  return (
+  const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+    if (!onSwipeArchive) return null;
+
+    const scale = dragX.interpolate({
+      inputRange: [-100, -50, 0],
+      outputRange: [1, 0.8, 0],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <TouchableOpacity
+        style={styles.rightAction}
+        onPress={() => {
+          swipeableRef.current?.close();
+          onSwipeArchive();
+        }}
+      >
+        <Animated.View style={{ transform: [{ scale }] }}>
+          {isArchivedChat ? (
+            <ArchiveRestore color="#FFF" size={24} />
+          ) : (
+            <Archive color="#FFF" size={24} />
+          )}
+        </Animated.View>
+        <Text style={styles.actionText}>{isArchivedChat ? 'Batal' : 'Arsip'}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const content = (
     <TouchableOpacity 
       style={[styles.container, isDarkMode && styles.containerDark, isSelected && (isDarkMode ? styles.selectedContainerDark : styles.selectedContainer)]} 
       onPress={onPress} 
@@ -97,6 +132,21 @@ export const ChatItem: React.FC<ChatItemProps> = ({
       </View>
     </TouchableOpacity>
   );
+
+  if (onSwipeArchive) {
+    return (
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        friction={2}
+        rightThreshold={40}
+      >
+        {content}
+      </Swipeable>
+    );
+  }
+
+  return content;
 };
 
 const styles = StyleSheet.create({
@@ -212,5 +262,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     opacity: 0.8,
+  },
+  rightAction: {
+    backgroundColor: '#00A884',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    height: '100%',
+  },
+  actionText: {
+    color: '#FFF',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '600',
   },
 });
