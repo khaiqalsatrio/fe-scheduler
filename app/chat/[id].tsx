@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, Animated, TouchableWithoutFeedback, ActivityIndicator, TextInput, ImageBackground, Modal, Keyboard, KeyboardEvent } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, Alert, SafeAreaView, Platform, StatusBar, Animated, ActivityIndicator, ImageBackground } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pin, X, ChevronLeft, User, Users, Search, MoreVertical, Lock, Sparkles, MessageCircle, FileText, Presentation } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Sparkles } from 'lucide-react-native';
 
 // Components
 import { MessageBubble } from '../../components/MessageBubble';
@@ -17,204 +16,38 @@ import { LocalSearchResults } from '../../components/chat/LocalSearchResults';
 import { ChatMessagesHeader } from '../../components/chat/ChatMessagesHeader';
 
 // Hooks & Services
-import { useChatSocket } from '../../hooks/useChatSocket';
-import { useChatMessages } from '../../hooks/useChatMessages';
-import { useChatActions } from '../../hooks/useChatActions';
-import { MessageService } from '../../services/messageService';
+import { useChatDetail } from '../../hooks/useChatDetail';
 import { ChatService } from '../../services/chatService';
-import { Message } from '../../types/chat';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function ChatDetailScreen() {
-
   const { id, name } = useLocalSearchParams();
   const router = useRouter();
-  const flatListRef = useRef<FlatList>(null);
   const { isDarkMode } = useTheme();
 
-  // --- UI States (Menus & Animations) ---
-  const keyboardHeightAnim = useRef(new Animated.Value(0)).current;
-  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const [isMenuVisible, setIsMenuVisible] = useState(false);
-  const [isAIActionsVisible, setIsAIActionsVisible] = useState(false);
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [isMenuModalVisible, setIsMenuModalVisible] = useState(false);
-  const menuModalAnim = useRef(new Animated.Value(0)).current;
-  const aiMenuAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  // --- Local Search States ---
-  const [isSearchingInside, setIsSearchingInside] = useState(false);
-  const [localSearchQuery, setLocalSearchQuery] = useState('');
-  const [localSearchResults, setLocalSearchResults] = useState<any[]>([]);
-  const [isSearchingLocalLoading, setIsSearchingLocalLoading] = useState(false);
-
-  // --- Local Search States ---
-
-  // --- Domain Logic (Hooks) ---
-  const { socket, myId, myIdRef } = useChatSocket(id as string);
   const {
-    messages,
-    setMessages,
-    chatItems,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    isAiThinking,
-    setIsAiThinking,
-    chatType,
-    memberCount,
-    fetchMessages,
-    handleSend,
-    handleUpdate,
-    handlePin,
-    handleDeleteLocal,
-    handleDeleteForEveryone,
-    handleReact,
-  } = useChatMessages(id as string, socket, myId, myIdRef, name as string);
+    flatListRef, keyboardHeightAnim,
+    replyingTo, setReplyingTo,
+    editingMessage, setEditingMessage,
+    selectedMessage, setSelectedMessage,
+    isMenuVisible, setIsMenuVisible,
+    isAIActionsVisible, setIsAIActionsVisible,
+    isDeleteModalVisible, setIsDeleteModalVisible,
+    isMenuModalVisible, setIsMenuModalVisible,
+    menuModalAnim, aiMenuAnim, pulseAnim,
+    isSearchingInside, setIsSearchingInside,
+    localSearchQuery, setLocalSearchQuery,
+    localSearchResults, setLocalSearchResults,
+    isSearchingLocalLoading,
+    activePinnedIndex, setActivePinnedIndex,
+    playingVoiceId, setPlayingVoiceId,
+    myId, chatItems, isLoading, isLoadingMore, hasMore, isAiThinking, chatType, memberCount,
+    fetchMessages, handlePin, handleReact,
+    onSendText, onUpdateText, onFileSend, onTeraAIAction, onActionDelete,
+    jumpToMessage, handleVoiceFinish, pinnedMessages, messages
+  } = useChatDetail(id as string, name as string);
 
-  const [activePinnedIndex, setActivePinnedIndex] = useState(0);
-  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
-
-  // --- Effects ---
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      (e: KeyboardEvent) => {
-        Animated.timing(keyboardHeightAnim, {
-          toValue: e.endCoordinates.height + 15,
-          duration: 250,
-          useNativeDriver: false,
-        }).start();
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        Animated.timing(keyboardHeightAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: false,
-        }).start();
-      }
-    );
-
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    fetchMessages();
-  }, [id, fetchMessages]);
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1200, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [pulseAnim]);
-
-  useEffect(() => {
-    if (isMenuModalVisible) {
-      menuModalAnim.setValue(0);
-      Animated.spring(menuModalAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        bounciness: 12,
-        speed: 10
-      }).start();
-    } else {
-      Animated.spring(menuModalAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 0,
-        speed: 10
-      }).start();
-    }
-  }, [isMenuModalVisible]);
-
-  useEffect(() => {
-    Animated.timing(aiMenuAnim, {
-      toValue: isAIActionsVisible ? 1 : 0,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-  }, [isAIActionsVisible, aiMenuAnim]);
-
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (localSearchQuery.trim().length > 0) {
-        onLocalSearch(localSearchQuery);
-      } else {
-        setLocalSearchResults([]);
-      }
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [localSearchQuery]);
-
-  // --- Handlers ---
-
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-  }, []);
-
-  const {
-    onLocalSearch,
-    onSendText,
-    onUpdateText,
-    onFileSend,
-    onTeraAIAction,
-    onActionDelete,
-  } = useChatActions({
-    id: id as string,
-    name: name as string,
-    myId,
-    messages,
-    setMessages,
-    handleSend,
-    handleUpdate,
-    handleDeleteLocal,
-    handleDeleteForEveryone,
-    setIsAiThinking,
-    setIsAIActionsVisible,
-    setIsSearchingLocalLoading,
-    setLocalSearchResults,
-    setReplyingTo,
-    setEditingMessage,
-    setIsMenuVisible,
-    scrollToBottom
-  });
-
-  const onHeaderMenuPress = () => {
-    setIsMenuModalVisible(true);
-  };
-
-  const jumpToMessage = (messageId: string) => {
-    const index = messages.findIndex(m => m.id === messageId);
-    if (index !== -1) flatListRef.current?.scrollToIndex({ index, animated: true });
-  };
-
-  const handleVoiceFinish = (finishedId: string) => {
-    const currentIndex = messages.findIndex(m => m.id === finishedId);
-    if (currentIndex === -1) return;
-    for (let i = currentIndex + 1; i < messages.length; i++) {
-      const nextMsg = messages[i];
-      if (nextMsg.file?.type?.startsWith('audio/') || nextMsg.file?.url?.toLowerCase().endsWith('.m4a')) {
-        setPlayingVoiceId(nextMsg.id);
-        break;
-      }
-    }
-  };
-
-  const pinnedMessages = messages.filter(m => m.isPinned);
+  const onHeaderMenuPress = () => setIsMenuModalVisible(true);
 
   const renderChatItem = useCallback(({ item }: { item: any }) => {
     if ('isDateSeparator' in item) {
@@ -247,7 +80,7 @@ export default function ChatDetailScreen() {
         status={item.status}
       />
     );
-  }, [playingVoiceId, myId, chatType, handleVoiceFinish, handleReact]);
+  }, [playingVoiceId, myId, chatType, handleVoiceFinish, handleReact, setSelectedMessage, setIsMenuVisible]);
 
   return (
     <SafeAreaView style={[styles.safeArea, isDarkMode && styles.safeAreaDark]}>
@@ -369,7 +202,6 @@ export default function ChatDetailScreen() {
         onReact={(emoji) => { if (selectedMessage) handleReact(selectedMessage.id, emoji); setIsMenuVisible(false); }}
       />
 
-      {/* Delete Confirmation Modal (Native Mockup Design) */}
       <ConfirmModal
         visible={isDeleteModalVisible}
         onClose={() => setIsDeleteModalVisible(false)}
