@@ -33,6 +33,8 @@ export default function ChatsScreen() {
     setIsMuteModalVisible,
     muteDuration,
     setMuteDuration,
+    isSelectionMode,
+    setIsSelectionMode,
     archivedCount,
     mainChats,
     fetchChatsFromBE,
@@ -118,6 +120,9 @@ export default function ChatsScreen() {
         }}
         onArchive={handleArchiveSelected}
         onDelete={() => setIsDeleteModalVisible(true)}
+        isSelectionMode={isSelectionMode}
+        onEnterSelectionMode={() => setIsSelectionMode(true)}
+        onCloseSelection={() => setIsSelectionMode(false)}
       />
 
       <ChatSearchBar value={searchQuery} onChangeText={setSearchQuery} />

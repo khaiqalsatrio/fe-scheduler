@@ -13,6 +13,9 @@ interface ChatListHeaderProps {
   onMute: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  isSelectionMode?: boolean;
+  onEnterSelectionMode?: () => void;
+  onCloseSelection?: () => void;
 }
 
 export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
@@ -23,10 +26,13 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
   onMute,
   onArchive,
   onDelete,
+  isSelectionMode,
+  onEnterSelectionMode,
+  onCloseSelection,
 }) => {
   const router = useRouter();
   const { isDarkMode } = useTheme();
-  const isSelected = selectedChatIds.length > 0;
+  const isSelected = selectedChatIds.length > 0 || !!isSelectionMode;
 
   const selectedChats = chats.filter(c => selectedChatIds.includes(c.id));
   const allPinned = selectedChats.every(c => c.isPinned);
@@ -37,7 +43,10 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
       {isSelected ? (
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <TouchableOpacity onPress={() => setSelectedChatIds([])} style={styles.backButton}>
+            <TouchableOpacity onPress={() => {
+              setSelectedChatIds([]);
+              if (onCloseSelection) onCloseSelection();
+            }} style={styles.backButton}>
               <ArrowLeft color="#FFF" size={24} />
             </TouchableOpacity>
             <Text style={styles.headerTitleSelected}>{selectedChatIds.length}</Text>
@@ -76,7 +85,7 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
             <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Chat</Text>
           </View>
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/profile' as any)}>
+            <TouchableOpacity style={styles.iconButton} onPress={onEnterSelectionMode}>
               <MoreVertical color={isDarkMode ? "#FFF" : "#333"} size={24} />
             </TouchableOpacity>
           </View>
@@ -90,15 +99,25 @@ const styles = StyleSheet.create({
   headerSafeArea: {
     backgroundColor: '#FFF',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    zIndex: 10,
   },
   headerSafeAreaDark: {
     backgroundColor: '#121212',
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
+    elevation: 0,
+    shadowOpacity: 0,
   },
   textDark: {
     color: '#FFF',
   },
   headerSelected: {
-    backgroundColor: '#075E54',
+    backgroundColor: '#005C4B',
   },
   header: {
     flexDirection: 'row',

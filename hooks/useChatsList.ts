@@ -21,6 +21,7 @@ export const useChatsList = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isMuteModalVisible, setIsMuteModalVisible] = useState(false);
   const [muteDuration, setMuteDuration] = useState<'8h' | '1w' | 'always'>('always');
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const fetchChatsFromBE = useCallback(async () => {
     setIsLoading(true);
@@ -85,15 +86,19 @@ export const useChatsList = () => {
   const toggleSelection = useCallback((id: string) => {
     setSelectedChatIds(prev => {
       if (prev.includes(id)) {
-        return prev.filter(item => item !== id);
+        const newSelection = prev.filter(item => item !== id);
+        if (newSelection.length === 0 && !isSelectionMode) {
+          // If we want to exit selection mode when last item is unselected, we can handle it elsewhere or just let isSelectionMode handle it.
+        }
+        return newSelection;
       } else {
         return [...prev, id];
       }
     });
-  }, []);
+  }, [isSelectionMode]);
 
   const handleChatPress = useCallback((id: string, name: string) => {
-    if (selectedChatIds.length > 0) {
+    if (selectedChatIds.length > 0 || isSelectionMode) {
       toggleSelection(id);
     } else {
       router.push({
@@ -101,19 +106,25 @@ export const useChatsList = () => {
         params: { id, name },
       });
     }
-  }, [selectedChatIds, toggleSelection, router]);
+  }, [selectedChatIds, isSelectionMode, toggleSelection, router]);
 
   const handleLongPress = useCallback((id: string) => {
+    setIsSelectionMode(true);
     toggleSelection(id);
   }, [toggleSelection]);
 
   // --- Bulk Actions ---
   const handlePinSelected = useCallback(async () => {
+    if (selectedChatIds.length === 0) {
+      setIsSelectionMode(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const allPinned = chats.filter(c => selectedChatIds.includes(c.id)).every(c => c.isPinned);
       await ChatService.pinConversations(selectedChatIds, !allPinned);
       setSelectedChatIds([]);
+      setIsSelectionMode(false);
       fetchChatsFromBE();
     } catch (error) {
       Alert.alert('Error', 'Gagal menyematkan percakapan.');
@@ -123,11 +134,16 @@ export const useChatsList = () => {
   }, [chats, selectedChatIds, fetchChatsFromBE]);
 
   const handleArchiveSelected = useCallback(async () => {
+    if (selectedChatIds.length === 0) {
+      setIsSelectionMode(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const allArchived = chats.filter(c => selectedChatIds.includes(c.id)).every(c => c.isArchived);
       await ChatService.archiveConversations(selectedChatIds, !allArchived);
       setSelectedChatIds([]);
+      setIsSelectionMode(false);
       fetchChatsFromBE();
     } catch (error) {
       Alert.alert('Error', 'Gagal memproses arsip.');
@@ -149,10 +165,15 @@ export const useChatsList = () => {
   }, [fetchChatsFromBE]);
 
   const handleMuteSelected = useCallback(async (duration?: string) => {
+    if (selectedChatIds.length === 0) {
+      setIsSelectionMode(false);
+      return;
+    }
     setIsLoading(true);
     try {
       await ChatService.muteConversations(selectedChatIds, true);
       setSelectedChatIds([]);
+      setIsSelectionMode(false);
       fetchChatsFromBE();
     } catch (error) {
       Alert.alert('Error', 'Terjadi kesalahan saat membisukan percakapan.');
@@ -162,10 +183,15 @@ export const useChatsList = () => {
   }, [selectedChatIds, fetchChatsFromBE]);
 
   const handleUnmuteSelected = useCallback(async () => {
+    if (selectedChatIds.length === 0) {
+      setIsSelectionMode(false);
+      return;
+    }
     setIsLoading(true);
     try {
       await ChatService.muteConversations(selectedChatIds, false);
       setSelectedChatIds([]);
+      setIsSelectionMode(false);
       fetchChatsFromBE();
     } catch (error) {
       Alert.alert('Error', 'Terjadi kesalahan saat mengaktifkan suara.');
@@ -175,10 +201,15 @@ export const useChatsList = () => {
   }, [selectedChatIds, fetchChatsFromBE]);
 
   const handleDeleteSelected = useCallback(async () => {
+    if (selectedChatIds.length === 0) {
+      setIsSelectionMode(false);
+      return;
+    }
     setIsLoading(true);
     try {
       await ChatService.deleteConversations(selectedChatIds);
       setSelectedChatIds([]);
+      setIsSelectionMode(false);
       fetchChatsFromBE();
     } catch (error) {
       Alert.alert('Error', 'Terjadi kesalahan saat menghapus percakapan.');
@@ -225,6 +256,8 @@ export const useChatsList = () => {
     setIsMuteModalVisible,
     muteDuration,
     setMuteDuration,
+    isSelectionMode,
+    setIsSelectionMode,
 
     // Derived
     archivedCount: filteredData.archivedCount,

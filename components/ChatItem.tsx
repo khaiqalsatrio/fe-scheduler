@@ -99,10 +99,10 @@ export const ChatItem: React.FC<ChatItemProps> = ({
             )}
           </View>
         )}
-        {isOnline && <View style={styles.onlineBadge} />}
+        {isOnline && !isSelected && <View style={styles.onlineBadge} />}
         {isSelected && (
-          <View style={styles.selectionOverlay}>
-            <Check color="#FFF" size={16} />
+          <View style={[styles.selectionBadge, isDarkMode && styles.selectionBadgeDark]}>
+            <Check color="#FFF" size={14} strokeWidth={3} />
           </View>
         )}
       </View>
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   onlineBadge: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 12,
     right: 0,
     width: 14,
     height: 14,
@@ -246,22 +246,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   selectedContainer: {
-    backgroundColor: '#E7F5FE', // Light blue tint like WA selection
+    backgroundColor: '#F0FAF5', // Soft, modern mint green
   },
   selectedContainerDark: {
-    backgroundColor: '#1A2A2A',
+    backgroundColor: '#162b25', // Modern dark green background
   },
-  selectionOverlay: {
+  selectionBadge: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#25D366', // WA green
-    borderRadius: 25,
+    bottom: 12,
+    right: -2,
+    width: 22,
+    height: 22,
+    backgroundColor: '#00A884',
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    opacity: 0.8,
+    borderWidth: 2,
+    borderColor: '#FFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+  },
+  selectionBadgeDark: {
+    borderColor: '#121212',
   },
   rightAction: {
     backgroundColor: '#00A884',
