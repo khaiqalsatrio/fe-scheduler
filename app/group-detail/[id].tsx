@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LogOut } from 'lucide-react-native';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useTheme } from '../../context/ThemeContext';
@@ -13,6 +13,7 @@ import { GroupMemberItem } from '../../components/group-detail/GroupMemberItem';
 
 export default function GroupDetailScreen() {
   const { id, title, type } = useLocalSearchParams();
+  const router = useRouter();
   const { isDarkMode } = useTheme();
 
   const {
@@ -84,6 +85,11 @@ export default function GroupDetailScreen() {
               setSearchQuery={setSearchQuery}
               setIsSearching={setIsSearching}
               hasNoMembers={filteredMembers.length === 0}
+              isAdminUser={isAdminUser}
+              onAddMember={() => {
+                // @ts-ignore
+                router.push({ pathname: '/new-chat', params: { groupId: id } });
+              }}
             />
           </>
         )}

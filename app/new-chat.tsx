@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, TouchableOpacity, TextInput, FlatList, Platform, StatusBar, ActivityIndicator, Image, ScrollView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Search, User, Users, UserPlus, X, CheckCircle2 } from 'lucide-react-native';
 import ChatService from '../services/chatService';
 import { useTheme } from '../context/ThemeContext';
+import { useChatsList } from '../hooks/useChatsList';
 
 type UserData = {
   id: string;
@@ -27,16 +28,58 @@ export default function NewChatScreen() {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const { isDarkMode } = useTheme();
 
+  const { groupId } = useLocalSearchParams<{ groupId?: string }>();
+  const { chats, fetchChatsFromBE } = useChatsList();
+
+  const [existingMemberIds, setExistingMemberIds] = useState<string[]>([]);
+
   useEffect(() => {
+    if (groupId) {
+      fetchChatsFromBE();
+      ChatService.getGroupMembers(groupId).then((members) => {
+        setExistingMemberIds(members.map((m: any) => m.userId || m.id));
+      }).catch(console.warn);
+    }
+  }, [groupId, fetchChatsFromBE]);
+
+  useEffect(() => {
+    if (groupId && chats.length > 0) {
+      const uniqueMembers = new Map<string, UserData>();
+      chats.forEach((c: any) => {
+        if (!c.isGroup && c.recipientId && !uniqueMembers.has(c.recipientId)) {
+          // Hanya masukkan jika user belum menjadi anggota grup
+          if (!existingMemberIds.includes(c.recipientId)) {
+            uniqueMembers.set(c.recipientId, {
+              id: c.recipientId,
+              name: c.name,
+              username: '',
+              avatar: c.avatar,
+              position: 'Member',
+              nik: null,
+              instansi: 'Telkom',
+              tag: undefined
+            });
+          }
+        }
+      });
+      setUsers(Array.from(uniqueMembers.values()));
+      setCategories(['Semua']);
+    }
+  }, [chats, groupId, existingMemberIds]);
+
+  useEffect(() => {
+    if (groupId) return; // Skip debounced API fetch if using local chats
+    
     // Debounce pencarian untuk optimalisasi (500ms)
     const delayDebounceFn = setTimeout(() => {
       fetchUsers();
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [searchQuery, groupId]);
 
   const fetchUsers = async () => {
+    if (groupId) return; // Safeguard
     setIsLoading(true);
     try {
       const data = await ChatService.searchUsers(searchQuery);
@@ -76,9 +119,27 @@ export default function NewChatScreen() {
   const handleStartChat = async () => {
     if (selectedUserIds.length === 0) return;
     
+    setIsCreatingChat(true);
+
+    if (groupId) {
+      // Adding members to existing group
+      try {
+        for (const userId of selectedUserIds) {
+          await ChatService.addMember(groupId, userId);
+        }
+        Alert.alert('Sukses', 'Anggota berhasil ditambahkan');
+        router.back();
+      } catch (error: any) {
+        console.warn('Error adding members:', error);
+        Alert.alert('Gagal', 'Gagal menambahkan anggota');
+      } finally {
+        setIsCreatingChat(false);
+      }
+      return;
+    }
+
     if (selectedUserIds.length === 1) {
       // Single Chat (DM)
-      setIsCreatingChat(true);
       try {
         const data = await ChatService.createConversation('dm', null, selectedUserIds[0]);
         const selectedUser = users.find(u => u.id === selectedUserIds[0]);
@@ -89,7 +150,7 @@ export default function NewChatScreen() {
       } catch (error: any) {
         console.warn('Error starting DM:', error);
         const errorMessage = error.response?.data?.message;
-        const alertMessage = Array.isArray(errorMessage) ? errorMessage.join('\\n') : (typeof errorMessage === 'string' ? errorMessage : 'Gagal memulai chat');
+        const alertMessage = Array.isArray(errorMessage) ? errorMessage.join('\n') : (typeof errorMessage === 'string' ? errorMessage : 'Gagal memulai chat');
         Alert.alert('Gagal', alertMessage);
       } finally {
         setIsCreatingChat(false);
@@ -97,7 +158,7 @@ export default function NewChatScreen() {
     } else {
       // Group Chat Diskusi - Navigate to create group screen
       const selectedParticipants = users.filter(u => selectedUserIds.includes(u.id));
-        
+      setIsCreatingChat(false);  
       router.push({
         pathname: '/create-group',
         params: { 
@@ -147,8 +208,12 @@ export default function NewChatScreen() {
             <ChevronLeft color={isDarkMode ? "#FFF" : "#000"} size={26} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
-            <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Cari Koneksi</Text>
-            <Text style={[styles.headerSubtitle, isDarkMode && styles.textGrayDark]}>Bangun koneksi baru, kembangkan jaringanmu</Text>
+            <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>
+              {groupId ? 'Tambah Anggota' : 'Cari Koneksi'}
+            </Text>
+            <Text style={[styles.headerSubtitle, isDarkMode && styles.textGrayDark]}>
+              {groupId ? 'Pilih kontak untuk ditambahkan ke grup' : 'Bangun koneksi baru, kembangkan jaringanmu'}
+            </Text>
           </View>
         </View>
 
@@ -261,11 +326,15 @@ export default function NewChatScreen() {
               <ActivityIndicator color="#FFF" />
             ) : (
               <Text style={styles.mainChatButtonText}>
-                {selectedUserIds.length > 1 ? 'Buat Grup Diskusi' : 'Mulai Chat'}
+                {groupId 
+                  ? 'Tambah ke Grup' 
+                  : (selectedUserIds.length > 1 ? 'Buat Grup Diskusi' : 'Mulai Chat')}
               </Text>
             )}
           </TouchableOpacity>
-          <Text style={styles.footerInstruction}>Pilih peserta untuk mulai koneksi</Text>
+          <Text style={styles.footerInstruction}>
+            {groupId ? 'Pilih peserta untuk ditambahkan ke grup' : 'Pilih peserta untuk mulai koneksi'}
+          </Text>
         </View>
       </View>
     </SafeAreaView>

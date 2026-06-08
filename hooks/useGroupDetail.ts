@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { ChatService } from '../services/chatService';
 import { AuthService } from '../services/authService';
 
@@ -24,14 +24,18 @@ export function useGroupDetail(id: string, initialTitle: string, type: string) {
   const [isRemoveModalVisible, setIsRemoveModalVisible] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<{id: string, name: string} | null>(null);
 
-  useEffect(() => {
-    const init = async () => {
-      const user = await AuthService.getCurrentUser();
-      setCurrentUser(user);
-      fetchMembers();
-    };
-    init();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      const init = async () => {
+        const user = await AuthService.getCurrentUser();
+        setCurrentUser(user);
+        fetchMembers();
+      };
+      if (id) {
+        init();
+      }
+    }, [id])
+  );
 
   useEffect(() => {
     if (currentUser && members.length > 0) {

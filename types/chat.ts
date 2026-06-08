@@ -108,4 +108,5 @@ export interface ChatListItem {
   isPinned?: boolean;
   isMuted?: boolean;
   isArchived?: boolean;
+  recipientId?: string;
 }

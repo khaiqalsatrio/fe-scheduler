@@ -10,6 +10,8 @@ interface GroupMembersHeaderProps {
   setSearchQuery: (query: string) => void;
   setIsSearching: (searching: boolean) => void;
   hasNoMembers: boolean;
+  isAdminUser?: boolean;
+  onAddMember?: () => void;
 }
 
 export function GroupMembersHeader({
@@ -18,7 +20,9 @@ export function GroupMembersHeader({
   searchQuery,
   setSearchQuery,
   setIsSearching,
-  hasNoMembers
+  hasNoMembers,
+  isAdminUser,
+  onAddMember
 }: GroupMembersHeaderProps) {
   const { isDarkMode } = useTheme();
 
@@ -54,14 +58,16 @@ export function GroupMembersHeader({
       <View style={[
         styles.mainCard,
         isDarkMode && styles.cardDark,
-        hasNoMembers && { borderBottomLeftRadius: 20, borderBottomRightRadius: 20, borderBottomWidth: 0 }
+        (hasNoMembers || !isAdminUser) && { borderBottomLeftRadius: 20, borderBottomRightRadius: 20, borderBottomWidth: 0 }
       ]}>
-        <TouchableOpacity style={[styles.addMemberRow, isDarkMode && styles.cardDark]}>
-          <View style={styles.actionIconCircle}>
-            <Plus color="#FFF" size={22} />
-          </View>
-          <Text style={styles.actionText}>Tambah anggota</Text>
-        </TouchableOpacity>
+        {isAdminUser && (
+          <TouchableOpacity style={[styles.addMemberRow, isDarkMode && styles.cardDark]} onPress={onAddMember}>
+            <View style={styles.actionIconCircle}>
+              <Plus color="#FFF" size={22} />
+            </View>
+            <Text style={styles.actionText}>Tambah anggota</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </>
   );

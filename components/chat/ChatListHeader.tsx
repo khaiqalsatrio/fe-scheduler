@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
-import { ArrowLeft, Pin, Bell, BellOff, Archive, Trash2, ListChecks } from 'lucide-react-native';
+import { ArrowLeft, Pin, Bell, BellOff, Archive, Trash2, ListChecks, Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { ChatListItem } from '../../types/chat';
 import { useTheme } from '../../context/ThemeContext';
@@ -85,6 +85,9 @@ export const ChatListHeader: React.FC<ChatListHeaderProps> = ({
             <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Chat</Text>
           </View>
           <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/create-group' as any)}>
+              <Plus color={isDarkMode ? "#FFF" : "#333"} size={24} />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton} onPress={onEnterSelectionMode}>
               <ListChecks color={isDarkMode ? "#FFF" : "#333"} size={24} />
             </TouchableOpacity>

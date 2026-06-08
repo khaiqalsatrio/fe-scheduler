@@ -60,7 +60,8 @@ export const ChatService = {
         isGroup: item.type === 'group',
         isPinned: !!item.pinned_at,
         isMuted: !!item.is_muted,
-        isArchived: !!item.is_archived
+        isArchived: !!item.is_archived,
+        recipientId: item.recipient?.id
       };
     });
   },
@@ -146,7 +147,7 @@ export const ChatService = {
    * Add a member to a group
    */
   async addMember(id: string, userId: string): Promise<void> {
-    await apiClient.post(`/conversations/${id}/members`, { userId });
+    await apiClient.post(`/conversations/${id}/members`, { userId, role: 'member' });
   },
 
   /**

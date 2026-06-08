@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, Alert, SafeAreaView, Platform, StatusBar, Animated, ActivityIndicator, ImageBackground } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { StyleSheet, View, Text, FlatList, Alert, SafeAreaView, Platform, StatusBar, Animated, ActivityIndicator, ImageBackground, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Sparkles } from 'lucide-react-native';
 
@@ -47,6 +47,20 @@ export default function ChatDetailScreen() {
     jumpToMessage, handleVoiceFinish, pinnedMessages, messages
   } = useChatDetail(id as string, name as string);
 
+  useEffect(() => {
+    const backAction = () => {
+      router.replace('/(tabs)/chats' as any);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [router]);
+
   const onHeaderMenuPress = () => setIsMenuModalVisible(true);
 
   const renderChatItem = useCallback(({ item }: { item: any }) => {
@@ -90,7 +104,7 @@ export default function ChatDetailScreen() {
           localSearchQuery={localSearchQuery}
           setLocalSearchQuery={setLocalSearchQuery}
           setIsSearchingInside={setIsSearchingInside}
-          onBack={() => router.back()}
+          onBack={() => router.replace('/(tabs)/chats' as any)}
           onHeaderInfoPress={() => {
             if (chatType === 'dm') {
               router.push({ pathname: '/user-profile/[id]' as any, params: { id: id as string, title: name as string } });
