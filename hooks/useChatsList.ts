@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { ChatListItem } from '../types/chat';
 import { ChatService } from '../services/chatService';
 
-export type FilterType = 'all' | 'unread' | 'groups';
+export type FilterType = 'all' | 'unread' | 'groups' | 'favorites';
 
 export const useChatsList = () => {
   const router = useRouter();
@@ -223,6 +223,7 @@ export const useChatsList = () => {
     const filtered = chats.filter(chat => {
       if (activeFilter === 'unread') return (chat.unreadCount ?? 0) > 0;
       if (activeFilter === 'groups') return chat.isGroup;
+      if (activeFilter === 'favorites') return chat.isPinned;
       return true;
     });
 

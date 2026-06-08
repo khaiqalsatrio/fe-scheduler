@@ -131,6 +131,7 @@ export default function ChatsScreen() {
         activeFilter={activeFilter}
         setActiveFilter={setActiveFilter}
         isVisible={selectedChatIds.length === 0}
+        unreadCount={chats.filter(c => (c.unreadCount ?? 0) > 0 && !c.isArchived).length}
       />
 
       {searchQuery.length > 0 ? (

@@ -7,12 +7,14 @@ interface ChatFiltersProps {
   activeFilter: FilterType;
   setActiveFilter: (filter: FilterType) => void;
   isVisible: boolean;
+  unreadCount?: number;
 }
 
 export const ChatFilters: React.FC<ChatFiltersProps> = ({
   activeFilter,
   setActiveFilter,
   isVisible,
+  unreadCount,
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -20,23 +22,36 @@ export const ChatFilters: React.FC<ChatFiltersProps> = ({
 
   return (
     <View style={[styles.filterContainer, isDarkMode && styles.filterContainerDark]}>
-      <TouchableOpacity 
-        style={[styles.filterChip, isDarkMode && styles.filterChipDark, activeFilter === 'all' && (isDarkMode ? styles.activeFilterChipDark : styles.activeFilterChip)]} 
+      <TouchableOpacity
+        style={[styles.filterChip, isDarkMode && styles.filterChipDark, activeFilter === 'all' && (isDarkMode ? styles.activeFilterChipDark : styles.activeFilterChip)]}
         onPress={() => setActiveFilter('all')}
       >
         <Text style={[styles.filterText, isDarkMode && styles.filterTextDark, activeFilter === 'all' && (isDarkMode ? styles.activeFilterTextDark : styles.activeFilterText)]}>All</Text>
       </TouchableOpacity>
-      <TouchableOpacity 
-        style={[styles.filterChip, isDarkMode && styles.filterChipDark, activeFilter === 'unread' && (isDarkMode ? styles.activeFilterChipDark : styles.activeFilterChip)]} 
+      <TouchableOpacity
+        style={[styles.filterChip, isDarkMode && styles.filterChipDark, activeFilter === 'unread' && (isDarkMode ? styles.activeFilterChipDark : styles.activeFilterChip)]}
         onPress={() => setActiveFilter('unread')}
       >
-        <Text style={[styles.filterText, isDarkMode && styles.filterTextDark, activeFilter === 'unread' && (isDarkMode ? styles.activeFilterTextDark : styles.activeFilterText)]}>Unread</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={[styles.filterText, isDarkMode && styles.filterTextDark, activeFilter === 'unread' && (isDarkMode ? styles.activeFilterTextDark : styles.activeFilterText)]}>Unread</Text>
+          {unreadCount !== undefined && unreadCount > 0 && (
+            <View style={[styles.badge, isDarkMode && styles.badgeDark, activeFilter === 'unread' && (isDarkMode ? styles.badgeActiveDark : styles.badgeActive)]}>
+              <Text style={[styles.badgeText, activeFilter === 'unread' && (isDarkMode ? styles.badgeTextActiveDark : styles.badgeTextActive)]}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
       </TouchableOpacity>
-      <TouchableOpacity 
-        style={[styles.filterChip, isDarkMode && styles.filterChipDark, activeFilter === 'groups' && (isDarkMode ? styles.activeFilterChipDark : styles.activeFilterChip)]} 
+      <TouchableOpacity
+        style={[styles.filterChip, isDarkMode && styles.filterChipDark, activeFilter === 'groups' && (isDarkMode ? styles.activeFilterChipDark : styles.activeFilterChip)]}
         onPress={() => setActiveFilter('groups')}
       >
         <Text style={[styles.filterText, isDarkMode && styles.filterTextDark, activeFilter === 'groups' && (isDarkMode ? styles.activeFilterTextDark : styles.activeFilterText)]}>Groups</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.filterChip, isDarkMode && styles.filterChipDark, activeFilter === 'favorites' && (isDarkMode ? styles.activeFilterChipDark : styles.activeFilterChip)]}
+        onPress={() => setActiveFilter('favorites')}
+      >
+        <Text style={[styles.filterText, isDarkMode && styles.filterTextDark, activeFilter === 'favorites' && (isDarkMode ? styles.activeFilterTextDark : styles.activeFilterText)]}>Favorites</Text>
       </TouchableOpacity>
     </View>
   );
@@ -86,5 +101,35 @@ const styles = StyleSheet.create({
   },
   activeFilterTextDark: {
     color: '#FFF',
+  },
+  badge: {
+    backgroundColor: '#25D366',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 20,
+  },
+  badgeActive: {
+    backgroundColor: '#065F46',
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  badgeTextActive: {
+    color: '#FFF',
+  },
+  badgeDark: {
+    backgroundColor: '#075E54',
+  },
+  badgeActiveDark: {
+    backgroundColor: '#FFF',
+  },
+  badgeTextActiveDark: {
+    color: '#075E54',
   },
 });
