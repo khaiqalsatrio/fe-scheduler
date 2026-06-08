@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { MapPin, User, X, Sparkle } from 'lucide-react-native';
+import { MapPin, User, X, Sparkle, CheckCircle2, Circle } from 'lucide-react-native';
 import { Activity } from '../../hooks/useAgenda';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -10,6 +10,10 @@ interface ActivityCardProps {
   onAddSuggestion?: (activity: Activity) => void;
   onDismissSuggestion?: (id: string) => void;
   onReplaceSuggestion?: (activity: Activity) => void;
+  onPress?: () => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
@@ -18,6 +22,10 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   onAddSuggestion,
   onDismissSuggestion,
   onReplaceSuggestion,
+  onPress,
+  isSelectionMode,
+  isSelected,
+  onToggleSelect,
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -65,7 +73,17 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   };
 
   return (
-    <View style={[styles.cardBase, getCardStyle()]}>
+    <TouchableOpacity 
+      activeOpacity={(isSelectionMode || onPress) ? 0.8 : 1}
+      onPress={() => {
+        if (isSelectionMode && onToggleSelect) {
+          onToggleSelect(activity.id);
+        } else if (onPress) {
+          onPress();
+        }
+      }}
+      style={[styles.cardBase, getCardStyle()]}
+    >
       <View style={styles.cardContent}>
         {/* Header containing Time and Badge */}
         <View style={styles.headerRow}>
@@ -73,9 +91,10 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             <Text
               style={[
                 styles.timeText,
-                isSaranAI && styles.timeTextSaranAI,
-                isPenting && styles.timeTextPenting,
-                isKurangRelevan && styles.timeTextKurangRelevan,
+                isDarkMode && styles.timeTextDark,
+                isSaranAI && (isDarkMode ? styles.timeTextSaranAIDark : styles.timeTextSaranAI),
+                isPenting && (isDarkMode ? styles.timeTextPentingDark : styles.timeTextPenting),
+                isKurangRelevan && (isDarkMode ? styles.timeTextKurangRelevanDark : styles.timeTextKurangRelevan),
               ]}
             >
               {activity.time}
@@ -83,11 +102,21 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             {getBadge()}
           </View>
           
-          {/* Delete button for standard user items */}
-          {activity.isUserItem && !isSaranAI && !isPenting && !isKurangRelevan && (
-            <TouchableOpacity onPress={() => onDelete(activity.id)} style={styles.deleteButton}>
-              <X size={16} color="#9CA3AF" />
+          {/* Delete button or Checkbox */}
+          {isSelectionMode ? (
+            <TouchableOpacity onPress={() => onToggleSelect && onToggleSelect(activity.id)} style={styles.deleteButton}>
+              {isSelected ? (
+                <CheckCircle2 size={20} color="#10B981" />
+              ) : (
+                <Circle size={20} color={isDarkMode ? "#6B7280" : "#9CA3AF"} />
+              )}
             </TouchableOpacity>
+          ) : (
+            activity.isUserItem && !isSaranAI && !isPenting && !isKurangRelevan && (
+              <TouchableOpacity onPress={() => onDelete(activity.id)} style={styles.deleteButton}>
+                <X size={16} color={isDarkMode ? "#D1D5DB" : "#9CA3AF"} />
+              </TouchableOpacity>
+            )
           )}
         </View>
 
@@ -97,16 +126,16 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         {/* Location Info */}
         {activity.location && (
           <View style={styles.metaRow}>
-            <MapPin size={12} color="#9CA3AF" />
-            <Text style={styles.metaText}>{activity.location}</Text>
+            <MapPin size={12} color={isDarkMode ? "#D1D5DB" : "#9CA3AF"} />
+            <Text style={[styles.metaText, isDarkMode && styles.metaTextDark]}>{activity.location}</Text>
           </View>
         )}
 
         {/* Speaker Info (if any) */}
         {activity.speaker && (
           <View style={[styles.metaRow, { marginTop: 4 }]}>
-            <User size={12} color="#9CA3AF" />
-            <Text style={styles.metaText}>Speaker: {activity.speaker}</Text>
+            <User size={12} color={isDarkMode ? "#D1D5DB" : "#9CA3AF"} />
+            <Text style={[styles.metaText, isDarkMode && styles.metaTextDark]}>Speaker: {activity.speaker}</Text>
           </View>
         )}
 
@@ -145,7 +174,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           resizeMode="contain"
         />
       )}
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -212,14 +241,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4B5563',
   },
+  timeTextDark: {
+    color: '#D1D5DB',
+  },
   timeTextSaranAI: {
     color: '#7C3AED',
+  },
+  timeTextSaranAIDark: {
+    color: '#C4B5FD',
   },
   timeTextPenting: {
     color: '#1D4ED8',
   },
+  timeTextPentingDark: {
+    color: '#93C5FD',
+  },
   timeTextKurangRelevan: {
     color: '#6B7280',
+  },
+  timeTextKurangRelevanDark: {
+    color: '#9CA3AF',
   },
   titleText: {
     fontSize: 15,
@@ -237,6 +278,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  metaTextDark: {
+    color: '#9CA3AF',
   },
   deleteButton: {
     padding: 2,

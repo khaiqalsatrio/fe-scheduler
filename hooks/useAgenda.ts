@@ -10,11 +10,10 @@ export interface Activity {
   title: string;
   location: string;
   speaker?: string;
+  notes?: string;
   isUserItem?: boolean;
   status?: string;
 }
-
-
 
 export const useAgenda = () => {
   const [agendas, setAgendas] = useState<AgendaItem[]>([]);
@@ -124,6 +123,33 @@ export const useAgenda = () => {
     return true;
   };
 
+  const bulkDeleteAgenda = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    Alert.alert(
+      "Hapus Agenda",
+      `Apakah Anda yakin ingin menghapus ${ids.length} agenda ini?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsSaving(true);
+              await Promise.all(ids.map(id => agendaService.deleteAgenda(id)));
+              fetchAgendas();
+            } catch (err) {
+              console.error('Bulk delete failed:', err);
+              Alert.alert('Error', 'Gagal menghapus beberapa agenda');
+            } finally {
+              setIsSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const groupedActivities = () => {
     const grouped: Record<string, Activity[]> = {};
 
@@ -143,6 +169,7 @@ export const useAgenda = () => {
         title: item.title,
         location: item.location || 'Lokasi tidak tersedia',
         speaker: item.speaker,
+        notes: item.description || (item as any).note,
         isUserItem: !item.status || item.status === 'pending',
         status: item.status
       });
@@ -161,6 +188,7 @@ export const useAgenda = () => {
     fetchAgendas,
     saveActivity,
     deleteAgenda,
+    bulkDeleteAgenda,
     setAgendas
   };
 };

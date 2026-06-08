@@ -59,7 +59,7 @@ export default function OnboardingScreen() {
       'keyboardDidShow',
       (e: KeyboardEvent) => {
         Animated.timing(keyboardHeightAnim, {
-          toValue: e.endCoordinates.height + 15,
+          toValue: e.endCoordinates.height + 40, // Tambahkan padding lebih besar
           duration: 250,
           useNativeDriver: false,
         }).start();
@@ -115,8 +115,8 @@ export default function OnboardingScreen() {
       } else {
         const msg = String(data.message || '').toLowerCase();
         if (
-          msg.includes('not found') || 
-          msg.includes('tidak terdaftar') || 
+          msg.includes('not found') ||
+          msg.includes('tidak terdaftar') ||
           msg.includes('kredensial tidak valid') ||
           msg.includes('invalid credentials') ||
           msg.includes('unauthorized') ||
@@ -133,8 +133,8 @@ export default function OnboardingScreen() {
       const errorMessage = Array.isArray(rawMessage) ? rawMessage.join(', ') : String(rawMessage);
       const lowerMessage = errorMessage.toLowerCase();
       if (
-        lowerMessage.includes('not found') || 
-        lowerMessage.includes('tidak terdaftar') || 
+        lowerMessage.includes('not found') ||
+        lowerMessage.includes('tidak terdaftar') ||
         lowerMessage.includes('kredensial tidak valid') ||
         lowerMessage.includes('invalid credentials') ||
         lowerMessage.includes('unauthorized') ||
@@ -170,7 +170,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, isDarkMode && darkStyles.safeArea]}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
@@ -181,10 +181,10 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView 
+        <ScrollView
           style={[styles.scrollView, isDarkMode && darkStyles.scrollView]}
-          contentContainerStyle={styles.scrollContent} 
-          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           <OnboardingHero />

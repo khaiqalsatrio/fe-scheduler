@@ -14,7 +14,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { Sparkle, AlertCircle, Search, MoreHorizontal, Plus } from 'lucide-react-native';
+import { Sparkle, AlertCircle, Search, MoreHorizontal, Plus, X, Trash2 } from 'lucide-react-native';
 
 // Custom Hooks & Utils
 import { useAgenda } from '../../hooks/useAgenda';
@@ -26,6 +26,7 @@ import { DaySelector } from '../../components/agenda/DaySelector';
 import { ActivityCard } from '../../components/agenda/ActivityCard';
 import { AddActivityModal } from '../../components/agenda/AddActivityModal';
 import { AIAssistantModal } from '../../components/agenda/AIAssistantModal';
+import { ActivityDetailModal } from '../../components/agenda/ActivityDetailModal';
 
 const generateDays = () => {
   const days = [];
@@ -66,6 +67,7 @@ export default function AgendaScreen() {
     fetchAgendas,
     saveActivity,
     deleteAgenda,
+    bulkDeleteAgenda,
     setAgendas,
   } = useAgenda();
 
@@ -73,6 +75,10 @@ export default function AgendaScreen() {
   const [selectedDay, setSelectedDay] = useState(1); // Default to today
   const [isAIModalVisible, setIsAIModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [selectedActivityForDetail, setSelectedActivityForDetail] = useState<any>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activityTitle, setActivityTitle] = useState('');
   const [activityNotes, setActivityNotes] = useState('');
   const [activityLocation, setActivityLocation] = useState('');
@@ -87,6 +93,25 @@ export default function AgendaScreen() {
       setActivityNotes('');
       setActivityLocation('');
     }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length > 0) {
+      bulkDeleteAgenda(selectedIds);
+      setIsSelectionMode(false);
+      setSelectedIds([]);
+    }
+  };
+
+  const handleCancelSelection = () => {
+    setIsSelectionMode(false);
+    setSelectedIds([]);
   };
 
   const handleAddSuggestion = async (activity: any) => {
@@ -136,15 +161,35 @@ export default function AgendaScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
-          <Image
-            source={require('../../assets/images/logo.png')}
-            style={styles.logoImage}
-          />
-          <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Aktivity</Text>
+          {isSelectionMode ? (
+            <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>{selectedIds.length} Terpilih</Text>
+          ) : (
+            <>
+              <Image
+                source={require('../../assets/images/logo.png')}
+                style={styles.logoImage}
+              />
+              <Text style={[styles.headerTitle, isDarkMode && styles.textDark]}>Aktivity</Text>
+            </>
+          )}
         </View>
-        <TouchableOpacity style={[styles.menuButton, isDarkMode && styles.menuButtonDark]}>
-          <MoreHorizontal color={isDarkMode ? "#FFF" : "#000"} size={20} />
-        </TouchableOpacity>
+        {isSelectionMode ? (
+          <View style={styles.selectionHeaderActions}>
+            <TouchableOpacity onPress={handleCancelSelection} style={[styles.menuButton, isDarkMode && styles.menuButtonDark]}>
+              <X color={isDarkMode ? "#FFF" : "#000"} size={20} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleBulkDelete} 
+              style={[styles.menuButton, { backgroundColor: '#FEE2E2', marginLeft: 8 }, isDarkMode && { backgroundColor: '#7F1D1D' }]}
+            >
+              <Trash2 color="#EF4444" size={20} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => setIsSelectionMode(true)} style={[styles.menuButton, isDarkMode && styles.menuButtonDark]}>
+            <MoreHorizontal color={isDarkMode ? "#FFF" : "#000"} size={20} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Search Bar / Ask Agent */}
@@ -204,6 +249,15 @@ export default function AgendaScreen() {
                         onAddSuggestion={handleAddSuggestion}
                         onDismissSuggestion={handleDismissSuggestion}
                         onReplaceSuggestion={handleReplaceSuggestion}
+                        isSelectionMode={isSelectionMode}
+                        isSelected={selectedIds.includes(activity.id)}
+                        onToggleSelect={handleToggleSelect}
+                        onPress={() => {
+                          if (!isSelectionMode) {
+                            setSelectedActivityForDetail(activity);
+                            setIsDetailModalVisible(true);
+                          }
+                        }}
                       />
                     ))
                   ) : (
@@ -247,6 +301,11 @@ export default function AgendaScreen() {
         onSend={handleSendToAI}
       />
 
+      <ActivityDetailModal
+        isVisible={isDetailModalVisible}
+        onClose={() => setIsDetailModalVisible(false)}
+        activity={selectedActivityForDetail}
+      />
 
     </SafeAreaView>
   );
@@ -288,6 +347,10 @@ const styles = StyleSheet.create({
   },
   textGrayDark: {
     color: '#AAA',
+  },
+  selectionHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   menuButton: {
     width: 36,

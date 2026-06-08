@@ -183,10 +183,10 @@ export default function ChatDetailScreen() {
             onFileSend={onFileSend}
           />
         )}
+        {Platform.OS === 'android' && (
+          <Animated.View style={{ height: keyboardHeightAnim }} />
+        )}
       </ImageBackground>
-      {Platform.OS === 'android' && (
-        <Animated.View style={{ height: keyboardHeightAnim, backgroundColor: isDarkMode ? '#121212' : '#E5DDD5' }} />
-      )}
 
       <MessageActionMenu
         visible={isMenuVisible}

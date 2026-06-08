@@ -7,7 +7,7 @@ import { Message } from '../types/chat';
 
 export function useChatDetail(id: string, name: string) {
   const flatListRef = useRef<FlatList>(null);
-  
+
   // UI states
   const keyboardHeightAnim = useRef(new Animated.Value(0)).current;
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -91,7 +91,7 @@ export function useChatDetail(id: string, name: string) {
       'keyboardDidShow',
       (e: KeyboardEvent) => {
         Animated.timing(keyboardHeightAnim, {
-          toValue: e.endCoordinates.height + 15,
+          toValue: e.endCoordinates.height + 20, // Menambahkan jarak yang lebih besar (40px)
           duration: 250,
           useNativeDriver: false,
         }).start();
