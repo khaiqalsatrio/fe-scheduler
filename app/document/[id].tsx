@@ -8,13 +8,15 @@ import {
   Share,
   Alert,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, FileText, Wand2, Sparkles, Copy } from 'lucide-react-native';
+import { ArrowLeft, Share2, FileText, Wand2, Sparkles, Copy, ExternalLink } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { DocumentService } from '../../services/documentService';
 import { useTheme } from '../../context/ThemeContext';
+import { CONFIG } from '../../constants/Config';
 
 export default function DocumentDetailScreen() {
   const { url, title, id } = useLocalSearchParams<{ url: string; title: string; id: string }>();
@@ -49,7 +51,8 @@ export default function DocumentDetailScreen() {
   const handleShare = useCallback(async () => {
     if (!url) return;
     try {
-      let shareMessage = `File: ${title}\nLink: ${url}`;
+      const fullUrl = url.startsWith('http') ? url : `${CONFIG.API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+      let shareMessage = `File: ${title}\nLink: ${fullUrl}`;
       if (analysisResult) {
         shareMessage += `\n\nSummary:\n${analysisResult}`;
       }
@@ -57,7 +60,7 @@ export default function DocumentDetailScreen() {
       await Share.share({
         title: title || 'Document',
         message: shareMessage,
-        url: url,
+        url: fullUrl,
       });
     } catch {
       Alert.alert('Gagal', 'Tidak dapat berbagi dokumen ini.');
@@ -85,6 +88,20 @@ export default function DocumentDetailScreen() {
     }
   };
 
+  const handleOpenBrowser = useCallback(async () => {
+    if (!url) {
+      Alert.alert('Error', 'URL dokumen tidak tersedia.');
+      return;
+    }
+    try {
+      const fullUrl = url.startsWith('http') ? url : `${CONFIG.API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+      await Linking.openURL(fullUrl);
+    } catch (error) {
+      console.error('Error opening browser:', error);
+      Alert.alert('Error', 'Gagal membuka browser.');
+    }
+  }, [url]);
+
   return (
     <View style={[styles.container, isDarkMode && styles.containerDark, { paddingTop: insets.top }]}>
       <Header
@@ -106,20 +123,32 @@ export default function DocumentDetailScreen() {
           <Text style={styles.docSubtitle}>File is ready to be summarized</Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.analyzeButton, isDarkMode && styles.analyzeButtonDark]}
-          onPress={handleAnalyze}
-          disabled={isAnalyzing}
-        >
-          {isAnalyzing ? (
-            <ActivityIndicator size="small" color={isDarkMode ? "#000" : "#FFF"} />
-          ) : (
-            <Sparkles color={isDarkMode ? "#000" : "#FFF"} size={20} />
-          )}
-          <Text style={[styles.analyzeButtonText, isDarkMode && styles.analyzeButtonTextDark]}>
-            {isAnalyzing ? 'Generating Summary...' : 'Generate Summary'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ width: '100%', gap: 12 }}>
+          <TouchableOpacity
+            style={[styles.analyzeButton, isDarkMode && styles.analyzeButtonDark]}
+            onPress={handleAnalyze}
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? (
+              <ActivityIndicator size="small" color={isDarkMode ? "#000" : "#FFF"} />
+            ) : (
+              <Sparkles color={isDarkMode ? "#000" : "#FFF"} size={20} />
+            )}
+            <Text style={[styles.analyzeButtonText, isDarkMode && styles.analyzeButtonTextDark]}>
+              {isAnalyzing ? 'Generating Summary...' : 'Generate Summary'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.browserButton, isDarkMode && styles.browserButtonDark]}
+            onPress={handleOpenBrowser}
+          >
+            <ExternalLink color={isDarkMode ? "#FFF" : "#111"} size={20} />
+            <Text style={[styles.browserButtonText, isDarkMode && styles.textDark]}>
+              Open in Browser
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {analysisResult && (
           <View style={[styles.resultContainer, isDarkMode && styles.resultContainerDark]}>
@@ -284,6 +313,28 @@ const styles = StyleSheet.create({
   },
   analyzeButtonTextDark: {
     color: '#000',
+  },
+  browserButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 10,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  browserButtonDark: {
+    backgroundColor: '#1E1E1E',
+    borderColor: '#333',
+  },
+  browserButtonText: {
+    color: '#111',
+    fontSize: 15,
+    fontWeight: '600',
   },
   resultContainer: {
     marginTop: 32,
