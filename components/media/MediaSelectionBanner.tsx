@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { X, Trash2 } from 'lucide-react-native';
 
 interface MediaSelectionBannerProps {
   selectedCount: number;
@@ -12,11 +13,11 @@ export function MediaSelectionBanner({ selectedCount, onCancel, onDelete }: Medi
     <View style={styles.selectionBanner}>
       <Text style={styles.selectionText}>{selectedCount} item dipilih</Text>
       <View style={styles.selectionActions}>
-        <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
-          <Text style={styles.cancelBtnText}>Batal</Text>
+        <TouchableOpacity onPress={onCancel} style={styles.iconBtn}>
+          <X color="#FFF" size={22} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={onDelete} style={styles.deleteBtn}>
-          <Text style={styles.deleteBtnText}>Hapus</Text>
+        <TouchableOpacity onPress={onDelete} style={styles.iconBtn}>
+          <Trash2 color="#EF4444" size={22} />
         </TouchableOpacity>
       </View>
     </View>
@@ -41,26 +42,9 @@ const styles = StyleSheet.create({
   selectionActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
-  cancelBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  cancelBtnText: {
-    color: '#FFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  deleteBtn: {
-    backgroundColor: '#EF4444',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  deleteBtnText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 14,
+  iconBtn: {
+    padding: 8,
   },
 });

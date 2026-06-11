@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { Pin } from 'lucide-react-native';
+import { Pin, X } from 'lucide-react-native';
 import { Message } from '../../types/chat';
 
 interface PinnedMessagesProps {
@@ -9,6 +9,7 @@ interface PinnedMessagesProps {
   setActivePinnedIndex: React.Dispatch<React.SetStateAction<number>>;
   jumpToMessage: (messageId: string) => void;
   chatName: string;
+  onUnpin?: (messageId: string) => void;
 }
 
 export function PinnedMessages({
@@ -16,7 +17,8 @@ export function PinnedMessages({
   activePinnedIndex,
   setActivePinnedIndex,
   jumpToMessage,
-  chatName
+  chatName,
+  onUnpin
 }: PinnedMessagesProps) {
   if (pinnedMessages.length === 0) return null;
 
@@ -41,6 +43,14 @@ export function PinnedMessages({
           </View>
         )}
       </TouchableOpacity>
+      {onUnpin && (
+        <TouchableOpacity 
+          style={styles.unpinButton} 
+          onPress={() => onUnpin(current.id)}
+        >
+          <X size={20} color="#666" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -54,4 +64,5 @@ const styles = StyleSheet.create({
   pinnedSenderName: { fontWeight: '700', color: '#00A884' },
   pinnedBadgeMini: { backgroundColor: '#F0F2F5', borderRadius: 10, width: 18, height: 18, justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
   pinnedBadgeText: { fontSize: 10, color: '#666', fontWeight: 'bold' },
+  unpinButton: { padding: 5, marginLeft: 10 },
 });

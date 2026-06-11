@@ -127,6 +127,7 @@ export default function ChatDetailScreen() {
           setActivePinnedIndex={setActivePinnedIndex}
           jumpToMessage={jumpToMessage}
           chatName={name as string}
+          onUnpin={(messageId) => handlePin(messageId, true)}
         />
 
         {isSearchingInside && localSearchQuery.length > 0 ? (

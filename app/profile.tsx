@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, ScrollView, Platform, StatusBar, ActivityIndicator, Modal, TextInput, Alert, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
-import { X, User, Bell, LogOut, ChevronRight, Camera, Lock, Eye, EyeOff, Moon, Sun } from 'lucide-react-native';
+import { X, User, Bell, LogOut, ChevronRight, Camera, Lock, Eye, EyeOff, Moon, Sun, Image as ImageIcon } from 'lucide-react-native';
 import AuthService from '../services/authService';
 import * as ImagePicker from 'expo-image-picker';
 import { CONFIG } from '../constants/Config';
@@ -13,6 +13,7 @@ export default function ProfileScreen() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
 
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -25,7 +26,7 @@ export default function ProfileScreen() {
     name: 'Loading...',
     email: 'loading@example.com',
     position: 'Please wait...',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
+    avatar: '',
     nik: '',
     username: '',
     phone: '',
@@ -56,43 +57,70 @@ export default function ProfileScreen() {
   };
 
   const getAvatarUrl = (avatarStr: string) => {
-    if (!avatarStr) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80';
+    if (!avatarStr) return '';
     if (avatarStr.startsWith('/')) {
       return `${CONFIG.API_BASE_URL}${avatarStr}`;
     }
     return avatarStr;
   };
 
-  const handlePickAvatar = async () => {
-    if (!isLoggedIn) return;
+  const processImageResult = async (result: ImagePicker.ImagePickerResult) => {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const selectedAsset = result.assets[0];
 
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+      setIsUploading(true);
+      const uriParts = selectedAsset.uri.split('/');
+      const fileName = selectedAsset.fileName || uriParts[uriParts.length - 1] || 'avatar.jpg';
+      const mimeType = selectedAsset.mimeType || 'image/jpeg';
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedAsset = result.assets[0];
-
-        setIsUploading(true);
-        const uriParts = selectedAsset.uri.split('/');
-        const fileName = selectedAsset.fileName || uriParts[uriParts.length - 1] || 'avatar.jpg';
-        const mimeType = selectedAsset.mimeType || 'image/jpeg';
-
+      try {
         const response = await AuthService.updateAvatar(selectedAsset.uri, mimeType, fileName);
-
         if (response && response.avatar) {
           setUserData(prev => ({ ...prev, avatar: response.avatar }));
         }
+      } catch (error) {
+        console.error('Error uploading avatar:', error);
+      } finally {
+        setIsUploading(false);
       }
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-    } finally {
-      setIsUploading(false);
     }
+  };
+
+  const handlePickAvatar = () => {
+    if (!isLoggedIn) return;
+    setIsAvatarModalVisible(true);
+  };
+
+  const handleCamera = async () => {
+    setIsAvatarModalVisible(false);
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert('Izin ditolak', 'Anda perlu memberikan izin kamera untuk mengambil foto.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    processImageResult(result);
+  };
+
+  const handleGallery = async () => {
+    setIsAvatarModalVisible(false);
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert('Izin ditolak', 'Anda perlu memberikan izin galeri untuk memilih foto.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    processImageResult(result);
   };
 
   useEffect(() => {
@@ -107,7 +135,7 @@ export default function ProfileScreen() {
           name: 'ACCOUNT',
           email: 'Masuk untuk sinkronisasi data',
           position: 'guest',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80',
+          avatar: '',
           nik: '',
           username: '',
           phone: '',
@@ -199,18 +227,39 @@ export default function ProfileScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* USER INFO */}
-          <View style={styles.userInfoSection}>
+          {/* COVER PHOTO / BLURRED BACKGROUND */}
+          <View style={styles.coverPhotoWrapper}>
+            {userData.avatar ? (
+              <Image 
+                source={{ uri: getAvatarUrl(userData.avatar) }} 
+                style={styles.coverPhoto} 
+                blurRadius={5} 
+              />
+            ) : (
+              <View style={[styles.coverPhoto, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F0F0F0' }]} />
+            )}
+            <View style={[styles.coverPhotoOverlay, isDarkMode && styles.coverPhotoOverlayDark]} />
+          </View>
+
+          <View style={styles.profileContent}>
+            {/* USER INFO */}
+            <View style={styles.userInfoSection}>
             <TouchableOpacity
               onPress={handlePickAvatar}
               disabled={isUploading || !isLoggedIn}
               style={styles.avatarContainer}
               activeOpacity={0.8}
             >
-              <Image
-                source={{ uri: getAvatarUrl(userData.avatar) }}
-                style={styles.avatar}
-              />
+              {userData.avatar ? (
+                <Image
+                  source={{ uri: getAvatarUrl(userData.avatar) }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center' }]}>
+                  <User size={60} color="#999" />
+                </View>
+              )}
               {isLoggedIn && (
                 <View style={styles.editAvatarBadge}>
                   <Camera size={16} color="#FFF" />
@@ -287,9 +336,10 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          {/* APP VERSION */}
-          <View style={styles.footer}>
-            <Text style={styles.versionText}>Version 2.4.0 (2024)</Text>
+            {/* APP VERSION */}
+            <View style={styles.footer}>
+              <Text style={styles.versionText}>Version 2.4.0 (2024)</Text>
+            </View>
           </View>
         </ScrollView>
 
@@ -470,6 +520,37 @@ export default function ProfileScreen() {
           </View>
         </Modal>
 
+        {/* AVATAR PICKER MODAL */}
+        <Modal
+          visible={isAvatarModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setIsAvatarModalVisible(false)}
+        >
+          <TouchableOpacity style={[styles.modalOverlay, { justifyContent: 'flex-end' }]} activeOpacity={1} onPress={() => setIsAvatarModalVisible(false)}>
+            <View style={[styles.bottomSheet, isDarkMode && styles.bottomSheetDark]} onStartShouldSetResponder={() => true}>
+              <View style={styles.bottomSheetIndicator} />
+              <Text style={[styles.bottomSheetTitle, isDarkMode && styles.textDark]}>Ubah Foto Profil</Text>
+              
+              <View style={styles.avatarOptionsContainer}>
+                <TouchableOpacity style={[styles.avatarOption, isDarkMode && styles.avatarOptionDark]} onPress={handleCamera}>
+                  <View style={[styles.avatarOptionIcon, { backgroundColor: isDarkMode ? '#1A3F5C' : '#E3F2FD' }]}>
+                    <Camera size={28} color={isDarkMode ? "#64B5F6" : "#1976D2"} />
+                  </View>
+                  <Text style={[styles.avatarOptionText, isDarkMode && styles.textDark]}>Kamera</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.avatarOption, isDarkMode && styles.avatarOptionDark]} onPress={handleGallery}>
+                  <View style={[styles.avatarOptionIcon, { backgroundColor: isDarkMode ? '#1B4A22' : '#E8F5E9' }]}>
+                    <ImageIcon size={28} color={isDarkMode ? "#81C784" : "#388E3C"} />
+                  </View>
+                  <Text style={[styles.avatarOptionText, isDarkMode && styles.textDark]}>Galeri</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
       </View>
     </SafeAreaView>
   );
@@ -539,9 +620,31 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 40,
     paddingBottom: 40,
+  },
+  profileContent: {
+    paddingHorizontal: 20,
+    paddingTop: 80,
+  },
+  coverPhotoWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 160,
+    overflow: 'hidden',
+  },
+  coverPhoto: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  coverPhotoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  coverPhotoOverlayDark: {
+    backgroundColor: 'rgba(18, 18, 18, 0.4)',
   },
   userInfoSection: {
     alignItems: 'center',
@@ -743,5 +846,56 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  bottomSheet: {
+    backgroundColor: '#FFF',
+    width: '100%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  bottomSheetDark: {
+    backgroundColor: '#1E1E1E',
+  },
+  bottomSheetIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    marginBottom: 20,
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 24,
+    width: '100%',
+    textAlign: 'center',
+  },
+  avatarOptionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 10,
+  },
+  avatarOption: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatarOptionDark: {
+  },
+  avatarOptionIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
   },
 });

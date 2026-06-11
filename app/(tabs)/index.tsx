@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Animated, Keyboard, KeyboardEvent } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, TextInput, Image, Platform, StatusBar, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Animated, Keyboard, KeyboardEvent, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
@@ -26,6 +26,7 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0); // 0: Email, 1: Password, (Steps 2+ handled by OnboardingOverlay)
   const [secureText, setSecureText] = useState(true);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   // Tooltip States
   const [showTooltip, setShowTooltip] = useState(false);
@@ -90,6 +91,11 @@ export default function OnboardingScreen() {
     return reg.test(text);
   };
 
+  const promptRegistration = () => {
+    setIsRegistering(true);
+    setShowRegisterModal(true);
+  };
+
   const loginApp = async () => {
     if (!password) {
       Alert.alert('Gagal', 'Silakan isi password Anda');
@@ -123,7 +129,7 @@ export default function OnboardingScreen() {
           msg.includes('incorrect') ||
           msg.includes('invalid')
         ) {
-          setIsRegistering(true);
+          promptRegistration();
         } else {
           Alert.alert('Login Gagal', data.message || 'Harap periksa kembali kredensial Anda.');
         }
@@ -141,7 +147,7 @@ export default function OnboardingScreen() {
         lowerMessage.includes('incorrect') ||
         lowerMessage.includes('invalid')
       ) {
-        setIsRegistering(true);
+        promptRegistration();
       } else {
         Alert.alert('Error', errorMessage || 'Gagal menyambung ke server.');
       }
@@ -280,6 +286,42 @@ export default function OnboardingScreen() {
           <Animated.View style={{ height: keyboardHeightAnim }} />
         )}
       </KeyboardAvoidingView>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showRegisterModal}
+        onRequestClose={() => setShowRegisterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, isDarkMode && darkStyles.modalContainer]}>
+            <View style={[styles.modalIconContainer, isDarkMode && darkStyles.modalIconContainer]}>
+              <MaterialCommunityIcons name="account-plus-outline" size={36} color="#27AE60" />
+            </View>
+            <Text style={[styles.modalTitle, isDarkMode && darkStyles.modalTitle]}>Akun Belum Terdaftar</Text>
+            <Text style={[styles.modalMessage, isDarkMode && darkStyles.modalMessage]}>
+              Email belum terdaftar. Apakah Anda ingin membuat akun baru dengan password ini?
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalCancelBtn, isDarkMode && darkStyles.modalCancelBtn]} onPress={() => setShowRegisterModal(false)} activeOpacity={0.7}>
+                <Text style={[styles.modalCancelText, isDarkMode && darkStyles.modalCancelText]}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalRegisterBtn} 
+                onPress={() => {
+                  setShowRegisterModal(false);
+                  onboardingState.prepareOnboarding(email, password);
+                  onboardingState.setIsRegistering(true);
+                  onboardingState.setStep(2);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalRegisterText}>Daftar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -343,6 +385,18 @@ const styles = StyleSheet.create({
   googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: '#EAEAEA', backgroundColor: '#FFF' },
   googleIcon: { width: 22, height: 22, marginRight: 12 },
   googleButtonText: { fontSize: 16, fontWeight: '700', color: '#333' },
+
+  // MODAL STYLES
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { width: '85%', backgroundColor: '#FFF', borderRadius: 24, padding: 24, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10 },
+  modalIconContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#E8F6EF', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: '#333', marginBottom: 12, textAlign: 'center' },
+  modalMessage: { fontSize: 15, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
+  modalActions: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  modalCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, borderColor: '#EAEAEA', marginRight: 8, alignItems: 'center' },
+  modalCancelText: { fontSize: 16, fontWeight: '700', color: '#666' },
+  modalRegisterBtn: { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: '#27AE60', marginLeft: 8, alignItems: 'center' },
+  modalRegisterText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 });
 
 const darkStyles = StyleSheet.create({
@@ -362,4 +416,11 @@ const darkStyles = StyleSheet.create({
   googleButton: { backgroundColor: '#1E1E1E', borderColor: '#333' },
   googleButtonText: { color: '#FFF' },
   registrationNoticeText: { color: '#AAA' },
+  
+  modalContainer: { backgroundColor: '#1E1E1E', shadowColor: '#000' },
+  modalIconContainer: { backgroundColor: '#183a26' },
+  modalTitle: { color: '#FFF' },
+  modalMessage: { color: '#AAA' },
+  modalCancelBtn: { borderColor: '#333' },
+  modalCancelText: { color: '#AAA' },
 });
